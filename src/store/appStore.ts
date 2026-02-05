@@ -49,12 +49,15 @@ type PacketDraftState = {
     created_by_role?: string;
     kb_version?: string;
     approval_status?: string;
+    updated_from?: "wizard" | "finder" | "manual";
+    updated_by_role?: string;
   };
   sectionNotes: Record<PacketDraftSection, string>;
   items: PacketDraftItem[];
   allowedIds: string[];
   blockedIds: string[];
   blockedReasons: Record<string, string>;
+  auditLog: { id: string; created_at: string; action: string; detail?: string }[];
 };
 
 type WizardCategory =
@@ -244,7 +247,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     items: [],
     allowedIds: [],
     blockedIds: [],
-    blockedReasons: {}
+    blockedReasons: {},
+    auditLog: []
   },
 
   ui: { noteModalOpen: false },
@@ -546,17 +550,30 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       const narrative = buildWizardNarrative(issueText, wizard);
 
+      const auditEntry = {
+        id: nanoid(),
+        created_at: new Date().toISOString(),
+        action: "wizard_apply",
+        detail: `Wizard category: ${wizard.category}`
+      };
+
       set((s) => ({
         packetDraft: {
           ...s.packetDraft,
-          meta: { ...s.packetDraft.meta, updated_at: new Date().toISOString() },
+          meta: {
+            ...s.packetDraft.meta,
+            updated_at: new Date().toISOString(),
+            updated_from: "wizard",
+            updated_by_role: "Medical Professional"
+          },
           sectionNotes: {
             ...s.packetDraft.sectionNotes,
             assessment: assessmentNoteByCategory[wizard.category],
             interventions: interventionsNoteByCategory[wizard.category],
             monitoring: monitoringNoteByCategory[wizard.category],
             documentation: narrative
-          }
+          },
+          auditLog: [...s.packetDraft.auditLog, auditEntry]
         }
       }));
 
@@ -600,7 +617,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       }
 
       get().actions.recomputeGating();
-    set(() => ({ activeTab: "wizard" }));
+      set(() => ({ activeTab: "wizard" }));
     },
 
     openNoteModal: () => set(() => ({ ui: { noteModalOpen: true } })),

@@ -87,7 +87,7 @@ export function DecisionWizardTab() {
   }, [issueText, step]);
 
   useEffect(() => {
-    if (step !== 3 || cocGuide || cocGuideLoading) return;
+    if (step !== 3 || !includeGovernance || cocGuide || cocGuideLoading) return;
     let cancelled = false;
     setCocGuideLoading(true);
     fetch("/kb/kb_change_of_condition.json")
@@ -113,7 +113,7 @@ export function DecisionWizardTab() {
     return () => {
       cancelled = true;
     };
-  }, [step, cocGuide, cocGuideLoading]);
+  }, [step, includeGovernance, cocGuide, cocGuideLoading]);
 
   useEffect(() => {
     setPathwayPath(selectedProblem?.pathway || null);
@@ -318,6 +318,12 @@ export function DecisionWizardTab() {
 
   function goNext(next?: string) { setActiveNodeId(next || null); }
 
+  function retryPathwayFetch() {
+    if (!pathwayPath) return;
+    setPathwayError(null);
+    setPathwayPath(`${pathwayPath.split("?")[0]}?retry=${Date.now()}`);
+  }
+
   function onSinglePick(n: Extract<WizardNode, { type: "question_single" }>, val: string) {
     setAnswers((p) => ({ ...p, [n.id]: val }));
     const opt = n.options.find((o) => o.value === val);
@@ -400,6 +406,7 @@ export function DecisionWizardTab() {
               value={issueText}
               onChange={(e) => setIssueText(e.target.value)}
               placeholder='Example: "Refusing meds since morning; more confused" or "Potassium 2.5" or "Chest pain radiating to jaw"'
+              aria-label="Describe the change in condition"
               style={{ width: "100%", minHeight: 90, padding: 10, borderRadius: 12, border: "1px solid #e5e7eb", fontFamily: "inherit" }}
             />
             <div style={{ display: "flex", gap: 8 }}>
@@ -454,6 +461,14 @@ export function DecisionWizardTab() {
                   <div style={{ border: "1px solid #fca5a5", borderRadius: 12, padding: 10 }}>
                     <div style={{ fontWeight: 800 }}>Could not load decision tree</div>
                     <div style={{ fontSize: 12, opacity: 0.9 }}>{pathwayError}</div>
+                    {pathwayPath ? (
+                      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
+                        Path: {pathwayPath}
+                      </div>
+                    ) : null}
+                    <div style={{ marginTop: 8 }}>
+                      <Btn onClick={retryPathwayFetch} style={{ padding: "6px 10px" }}>Retry</Btn>
+                    </div>
                   </div>
                 ) : null}
 
@@ -602,6 +617,7 @@ export function DecisionWizardTab() {
                   type="checkbox"
                   checked={includeGovernance}
                   onChange={(e) => setIncludeGovernance(e.target.checked)}
+                  aria-label="Include governance metadata in note"
                 />
                 <span style={{ fontSize: 12, fontWeight: 700 }}>Include governance metadata in note</span>
               </label>
@@ -634,7 +650,16 @@ export function DecisionWizardTab() {
             <div style={{ display: "flex", gap: 8 }}>
               <Btn onClick={wizardBack}>Back</Btn>
               <div style={{ flex: 1 }} />
-              <Btn onClick={() => { try { actions?.wizardFinish?.(); } catch {} }}>Finish</Btn>
+              <Btn
+                onClick={() => {
+                  try {
+                    actions?.wizardApplyToPacket?.();
+                    actions?.openNoteModal?.();
+                  } catch {}
+                }}
+              >
+                Finish
+              </Btn>
             </div>
           </div>
         ) : null}
