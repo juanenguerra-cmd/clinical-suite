@@ -105,7 +105,7 @@
       "id": "red_flag_stop",
       "type": "info",
       "title": "Red Flag \u2014 Escalate",
-      "body": "Follow facility emergency protocol. Ensure safety, obtain vitals, and notify provider/EMS per policy. Document time of notification and orders received.",
+      "body": "Follow facility emergency protocol (align with NYS DOH guidance). Ensure safety, obtain vitals, and notify provider/EMS per policy. Document time of notification and orders received.",
       "next": "actions_checklist"
     },
     {
@@ -191,11 +191,11 @@
           "items": [
             {
               "id": "sbar",
-              "text": "Notified provider using SBAR with objective findings"
+              "text": "Notified provider using SBAR with objective findings per NYS DOH/facility policy"
             },
             {
               "id": "notify_family",
-              "text": "Notified resident/representative as appropriate"
+              "text": "Notified resident/representative as appropriate per NY requirements/facility policy"
             },
             {
               "id": "plan",

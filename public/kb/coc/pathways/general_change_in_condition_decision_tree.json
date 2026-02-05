@@ -249,7 +249,7 @@
       "id": "t_vitals",
       "type": "info",
       "title": "Collect minimum data",
-      "body": "Obtain full vital signs (BP/HR/RR/T/SpO2) and pain score; compare to baseline. Perform a focused assessment related to the concern (airway/breathing/circulation, mental status, neuro, skin, hydration, and symptoms). Check blood glucose for acute mental status changes per protocol. Review recent medication changes, allergies, and relevant history. Use standard and transmission-based precautions per CDC guidance and initiate isolation/source control if symptomatic. Notify provider using SBAR when indicated.",
+      "body": "Obtain full vital signs (BP/HR/RR/T/SpO2) and pain score; compare to baseline. Perform a focused assessment related to the concern (airway/breathing/circulation, mental status, neuro, skin, hydration, and symptoms). Check blood glucose for acute mental status changes per protocol. Review recent medication changes, allergies, and relevant history. Use standard and transmission-based precautions per CDC guidance and initiate isolation/source control if symptomatic. Notify the provider using SBAR when indicated and follow New York State Department of Health guidance and facility policy for change-in-condition assessment, documentation, and timely notification of the resident/representative.",
       "next": "check_actions"
     },
     {
@@ -337,7 +337,7 @@
           "items": [
             {
               "id": "sbar",
-              "text": "Notified provider using SBAR with objective findings"
+              "text": "Notified provider using SBAR with objective findings per NYS DOH guidance/facility policy"
             },
             {
               "id": "orders",
@@ -345,7 +345,7 @@
             },
             {
               "id": "family",
-              "text": "Notified resident/representative/family as appropriate"
+              "text": "Notified resident/representative/family as appropriate per NY requirements/facility policy"
             },
             {
               "id": "plan",
@@ -353,7 +353,7 @@
             },
             {
               "id": "onset",
-              "text": "Documented time of change in condition and key objective findings"
+              "text": "Documented time of change in condition, key objective findings, and notifications per NY policy"
             },
             {
               "id": "education",

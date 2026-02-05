@@ -107,7 +107,7 @@
       "id": "stroke_escalate",
       "type": "info",
       "title": "Emergency response (stroke suspected)",
-      "body": "Activate facility emergency response and call 911 per protocol. Obtain vitals and blood glucose if feasible without delaying EMS. Notify provider and document times.",
+      "body": "Activate facility emergency response and call 911 per protocol (align with NYS DOH guidance for emergent neurologic changes). Obtain vitals and blood glucose if feasible without delaying EMS. Notify provider, document times, and notify resident/representative per facility policy.",
       "next": "stroke_actions_core"
     },
     {
@@ -197,7 +197,7 @@
             },
             {
               "id": "notify",
-              "text": "Notified provider/representative with times and received orders"
+              "text": "Notified provider/representative with times and received orders per NYS DOH/facility policy"
             },
             {
               "id": "plan",

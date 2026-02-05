@@ -326,6 +326,10 @@ export function DecisionWizardTab() {
 
   function onSinglePick(n: Extract<WizardNode, { type: "question_single" }>, val: string) {
     setAnswers((p) => ({ ...p, [n.id]: val }));
+  }
+
+  function advanceSingle(n: Extract<WizardNode, { type: "question_single" }>) {
+    const val = answers[n.id];
     const opt = n.options.find((o) => o.value === val);
     if (opt?.next) setActiveNodeId(opt.next);
     else if (n.next) setActiveNodeId(n.next);
@@ -374,6 +378,8 @@ export function DecisionWizardTab() {
     setAnswers({});
     setSelected({});
   }
+
+  const decisionTreeComplete = !pathway || !activeNodeId || node?.type === "summary";
 
   const panelStyle: React.CSSProperties = {
     border: "1px solid #eee",
@@ -493,6 +499,7 @@ export function DecisionWizardTab() {
                                 </label>
                               );
                             })}
+                            <Btn onClick={() => advanceSingle(node)} disabled={!answers[node.id]}>Continue</Btn>
                           </div>
                         ) : null}
 
@@ -593,7 +600,12 @@ export function DecisionWizardTab() {
             <div style={{ display: "flex", gap: 8 }}>
               <Btn onClick={wizardBack}>Back</Btn>
               <div style={{ flex: 1 }} />
-              <Btn onClick={wizardNext} disabled={!selectedProblem || !!pathwayError}>Next</Btn>
+              <Btn
+                onClick={wizardNext}
+                disabled={!selectedProblem || !!pathwayError || !decisionTreeComplete}
+              >
+                Next
+              </Btn>
             </div>
           </div>
         ) : null}
