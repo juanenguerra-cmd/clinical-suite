@@ -272,6 +272,18 @@ export function DecisionWizardTab() {
     setSelected((p) => ({ ...(p || {}), [sectionKey]: {} }));
   }
 
+  function resetDecisionTreeSession() {
+    actions?.wizardReset?.();
+    setIssueText("");
+    setSelectedProblem(null);
+    setPathwayPath(null);
+    setPathway(null);
+    setPathwayError(null);
+    setActiveNodeId(null);
+    setAnswers({});
+    setSelected({});
+  }
+
   const panelStyle: React.CSSProperties = {
     border: "1px solid #eee",
     borderRadius: 16,
@@ -450,14 +462,20 @@ export function DecisionWizardTab() {
                         {node.type === "summary" ? (
                           <div style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 10 }}>
                             <div style={{ fontWeight: 900 }}>Decision tree complete</div>
-                            <Btn onClick={wizardNext} style={{ marginTop: 10 }}>Next</Btn>
+                            <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                              <Btn onClick={wizardNext}>Next</Btn>
+                              <Btn onClick={resetDecisionTreeSession} style={{ borderColor: "#cbd5f5" }}>Reset</Btn>
+                            </div>
                           </div>
                         ) : null}
                       </div>
                     ) : (
                       <div style={{ marginTop: 10 }}>
                         <div style={{ opacity: 0.9 }}>End of decision tree reached.</div>
-                        <Btn onClick={wizardNext} style={{ marginTop: 10 }}>Next</Btn>
+                        <div style={{ display: "flex", gap: 8, marginTop: 10, flexWrap: "wrap" }}>
+                          <Btn onClick={wizardNext}>Next</Btn>
+                          <Btn onClick={resetDecisionTreeSession} style={{ borderColor: "#cbd5f5" }}>Reset</Btn>
+                        </div>
                       </div>
                     )}
                   </div>
