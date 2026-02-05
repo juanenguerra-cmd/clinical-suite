@@ -390,18 +390,32 @@ export function DecisionWizardTab() {
     background: "#fff"
   };
 
+  const pillStyle: React.CSSProperties = {
+    border: "1px solid #e5e7eb",
+    borderRadius: 9999,
+    padding: "6px 10px",
+    maxWidth: "100%",
+    overflowWrap: "anywhere",
+    wordBreak: "break-word"
+  };
+
+  const pathPillStyle: React.CSSProperties = {
+    ...pillStyle,
+    wordBreak: "break-all"
+  };
+
   return (
     <div style={{ display: "grid", gap: 12 }}>
       <div style={panelStyle}>
         <div style={{ fontWeight: 900, fontSize: 16 }}>Decision Wizard</div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, fontSize: 12 }}>
-          <span style={{ border: "1px solid #e5e7eb", borderRadius: 9999, padding: "6px 10px" }}>Step: {step}</span>
+          <span style={pillStyle}>Step: {step}</span>
           {selectedProblem?.label ? (
-            <span style={{ border: "1px solid #e5e7eb", borderRadius: 9999, padding: "6px 10px" }}>Selected: {selectedProblem.label}</span>
+            <span style={pillStyle}>Selected: {selectedProblem.label}</span>
           ) : null}
           {pathwayPath ? (
-            <span style={{ border: "1px solid #e5e7eb", borderRadius: 9999, padding: "6px 10px" }}>Path: {pathwayPath}</span>
+            <span style={pathPillStyle}>Path: {pathwayPath}</span>
           ) : null}
         </div>
 
