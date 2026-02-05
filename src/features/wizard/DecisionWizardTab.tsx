@@ -78,14 +78,18 @@ export function DecisionWizardTab() {
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [selected, setSelected] = useState<Record<string, Record<string, boolean>>>({});
   const [cocGuide, setCocGuide] = useState<CocGuide | null>(null);
+  const [cocGuideLoading, setCocGuideLoading] = useState(false);
   const [cocGuideError, setCocGuideError] = useState<string | null>(null);
+  const [includeGovernance, setIncludeGovernance] = useState(false);
 
   useEffect(() => {
     if (step === 1) setSelectedProblem(null);
   }, [issueText, step]);
 
   useEffect(() => {
+    if (step !== 3 || cocGuide || cocGuideLoading) return;
     let cancelled = false;
+    setCocGuideLoading(true);
     fetch("/kb/kb_change_of_condition.json")
       .then(async (r) => {
         if (!r.ok) throw new Error(`HTTP ${r.status} loading /kb/kb_change_of_condition.json`);
@@ -100,12 +104,16 @@ export function DecisionWizardTab() {
         if (cancelled) return;
         setCocGuide(null);
         setCocGuideError(String(e?.message || e));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setCocGuideLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [step, cocGuide, cocGuideLoading]);
 
   useEffect(() => {
     setPathwayPath(selectedProblem?.pathway || null);
@@ -284,12 +292,12 @@ export function DecisionWizardTab() {
       monitoringSummary ? `Monitoring plan: ${monitoringSummary}.` : "",
       documentationSummary ? `Documentation captured: ${documentationSummary}.` : "",
       notificationsSummary ? `Notifications: ${notificationsSummary}.` : "",
-      cocGuide?.title ? `KB guidance: ${cocGuide.title}.` : "",
-      cocGuide?.effective_date ? `KB effective: ${cocGuide.effective_date}.` : "",
-      cocGuide?.review_by ? `Review by: ${cocGuide.review_by}.` : "",
-      referenceLine,
-      sectionLine,
-      approvalWarning ? `Governance: ${approvalWarning}` : ""
+      includeGovernance && cocGuide?.title ? `KB guidance: ${cocGuide.title}.` : "",
+      includeGovernance && cocGuide?.effective_date ? `KB effective: ${cocGuide.effective_date}.` : "",
+      includeGovernance && cocGuide?.review_by ? `Review by: ${cocGuide.review_by}.` : "",
+      includeGovernance ? referenceLine : "",
+      includeGovernance ? sectionLine : "",
+      includeGovernance && approvalWarning ? `Governance: ${approvalWarning}` : ""
     ];
     return lines.filter(Boolean).join(" ");
   }, [
@@ -304,7 +312,8 @@ export function DecisionWizardTab() {
     cocGuide,
     referenceLine,
     sectionLine,
-    approvalWarning
+    approvalWarning,
+    includeGovernance
   ]);
 
   function goNext(next?: string) { setActiveNodeId(next || null); }
@@ -583,12 +592,38 @@ export function DecisionWizardTab() {
                 <div style={{ fontSize: 12, opacity: 0.9 }}>{approvalWarning}</div>
               </div>
             ) : null}
-            {cocGuideError ? (
-              <div style={{ border: "1px solid #fca5a5", borderRadius: 12, padding: 10 }}>
-                <div style={{ fontWeight: 800 }}>KB governance data unavailable</div>
-                <div style={{ fontSize: 12, opacity: 0.9 }}>{cocGuideError}</div>
+            <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, background: "#f8fafc" }}>
+              <div style={{ fontWeight: 800 }}>Governance metadata</div>
+              <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+                Optional KB governance details can be added to the note for survey-ready documentation.
               </div>
-            ) : null}
+              <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={includeGovernance}
+                  onChange={(e) => setIncludeGovernance(e.target.checked)}
+                />
+                <span style={{ fontSize: 12, fontWeight: 700 }}>Include governance metadata in note</span>
+              </label>
+              {cocGuideLoading ? (
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Loading governance references…</div>
+              ) : null}
+              {cocGuideError ? (
+                <div style={{ border: "1px solid #fca5a5", borderRadius: 10, padding: 8, marginTop: 8 }}>
+                  <div style={{ fontWeight: 800, fontSize: 12 }}>KB governance data unavailable</div>
+                  <div style={{ fontSize: 12, opacity: 0.9 }}>{cocGuideError}</div>
+                </div>
+              ) : null}
+              {cocGuide ? (
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 8, display: "grid", gap: 4 }}>
+                  <div><strong>Guidance:</strong> {cocGuide.title}</div>
+                  {cocGuide.effective_date ? <div><strong>Effective:</strong> {cocGuide.effective_date}</div> : null}
+                  {cocGuide.review_by ? <div><strong>Review by:</strong> {cocGuide.review_by}</div> : null}
+                  {referenceLine ? <div>{referenceLine}</div> : null}
+                  {sectionLine ? <div>{sectionLine}</div> : null}
+                </div>
+              ) : null}
+            </div>
             <div style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 10 }}>
               <div style={{ fontWeight: 900 }}>Draft note</div>
               <textarea value={finalNote} readOnly style={{ width: "100%", minHeight: 130, marginTop: 8, padding: 10, borderRadius: 12, border: "1px solid #e5e7eb", fontFamily: "inherit" }} />
