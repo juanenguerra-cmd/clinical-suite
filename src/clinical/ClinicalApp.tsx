@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import type { ToolType } from './types';
 import PsychNoteForm from './components/forms/PsychNoteForm';
-import TransportTracker from './components/TransportTracker';
 import ExpiryNoteForm from './components/forms/ExpiryNoteForm';
 import AbxNoteForm from './components/forms/AbxNoteForm';
 import AccidentNoteForm from './components/forms/AccidentNoteForm';
@@ -13,10 +12,9 @@ import COCForm from './components/forms/COCForm';
 import DecisionTreePanel from './components/DecisionTreePanel';
 
 const App: React.FC = () => {
-  const [activeTool, setActiveTool] = useState<ToolType>('transport');
+  const [activeTool, setActiveTool] = useState<ToolType>('decision_tree');
 
   const navItems: { id: ToolType; label: string; icon: string }[] = [
-    { id: 'transport', label: 'Transport Tracker', icon: '🚐' },
     { id: 'decision_tree', label: 'Decision Tree', icon: '🧭' },
     { id: 'psych', label: 'Psych Consult', icon: '🧠' },
     { id: 'coc', label: 'Change of Condition', icon: '⚠️' },
@@ -29,7 +27,7 @@ const App: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col md:flex-row">
+    <div className="h-full min-h-0 flex flex-col md:flex-row">
       {/* Sidebar */}
       <aside className="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 border-r border-slate-800">
         <div className="p-6">
@@ -80,7 +78,6 @@ const App: React.FC = () => {
         </header>
 
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
-          {activeTool === 'transport' && <TransportTracker />}
           {activeTool === 'decision_tree' && <DecisionTreePanel />}
           {activeTool === 'psych' && <PsychNoteForm />}
           {activeTool === 'expiry' && <ExpiryNoteForm />}
