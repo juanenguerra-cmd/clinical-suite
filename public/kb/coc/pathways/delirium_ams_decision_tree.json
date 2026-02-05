@@ -94,7 +94,7 @@
       "id": "info_min_data",
       "type": "info",
       "title": "Minimum data to collect",
-      "body": "Obtain full vital signs and compare to baseline. Check blood glucose if indicated (delirium mimic). Assess oxygenation (SpO2) and pain. Review intake/output and last BM. Review recent meds and sedatives. Screen for infection symptoms. Notify provider using SBAR with objective findings and baseline comparison.",
+      "body": "Obtain full vital signs and compare to baseline. Check blood glucose if indicated (delirium mimic). Assess oxygenation (SpO2) and pain. Review intake/output and last BM. Review recent meds and sedatives. Screen for infection symptoms. Notify provider using SBAR with objective findings and baseline comparison per NYS DOH guidance and facility policy.",
       "next": "check_actions"
     },
     {
@@ -166,11 +166,11 @@
             },
             {
               "id": "notify",
-              "text": "Notified provider using SBAR; documented orders and resident response"
+              "text": "Notified provider using SBAR; documented orders and resident response per NYS DOH/facility policy"
             },
             {
               "id": "family",
-              "text": "Notified family/representative as appropriate"
+              "text": "Notified family/representative as appropriate per NY requirements/facility policy"
             },
             {
               "id": "plan",

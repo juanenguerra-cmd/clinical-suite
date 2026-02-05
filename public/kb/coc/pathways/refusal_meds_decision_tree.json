@@ -104,7 +104,7 @@
       "id": "info_education",
       "type": "info",
       "title": "Education + alternatives",
-      "body": "Provide brief resident\u2011centered education on purpose and risks of refusal. Offer acceptable alternatives per policy: different timing, with food, alternate formulation only if allowed, and re\u2011approach later. Respect resident rights and avoid coercion.",
+      "body": "Provide brief resident\u2011centered education on purpose and risks of refusal. Offer acceptable alternatives per policy: different timing, with food, alternate formulation only if allowed, and re\u2011approach later. Respect resident rights and avoid coercion, consistent with NYS DOH guidance.",
       "next": "q_notify"
     },
     {
@@ -189,11 +189,11 @@
             },
             {
               "id": "notify",
-              "text": "Notified provider/supervisor as indicated and documented orders/response"
+              "text": "Notified provider/supervisor as indicated and documented orders/response per NYS DOH/facility policy"
             },
             {
               "id": "rp",
-              "text": "Notified responsible party/family as applicable per policy"
+              "text": "Notified responsible party/family as applicable per NY requirements/facility policy"
             },
             {
               "id": "plan",

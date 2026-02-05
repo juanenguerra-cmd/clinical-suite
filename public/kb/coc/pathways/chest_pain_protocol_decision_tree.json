@@ -74,7 +74,7 @@
       "id": "cp_escalate",
       "type": "info",
       "title": "Emergency response (possible ACS)",
-      "body": "Activate facility emergency response and call 911 per protocol. Obtain vitals and SpO2 if feasible without delaying EMS. Notify provider immediately and document times. Follow standing orders only if present and allowed.",
+      "body": "Activate facility emergency response and call 911 per protocol (align with NYS DOH guidance for emergent cardiac symptoms). Obtain vitals and SpO2 if feasible without delaying EMS. Notify provider immediately and document times. Follow standing orders only if present and allowed by facility policy.",
       "next": "cp_followthrough"
     },
     {
@@ -164,7 +164,7 @@
             },
             {
               "id": "notify",
-              "text": "Notified provider/representative with times; documented orders received"
+              "text": "Notified provider/representative with times; documented orders received per NYS DOH/facility policy"
             },
             {
               "id": "plan",

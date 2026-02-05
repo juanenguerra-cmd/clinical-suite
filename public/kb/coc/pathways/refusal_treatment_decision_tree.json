@@ -93,7 +93,7 @@
       "id": "info_education",
       "type": "info",
       "title": "Education + alternatives",
-      "body": "Explain purpose, risks/benefits, and alternatives in plain language. Offer options (timing, smaller steps, different staff approach) when feasible. Respect resident rights; avoid coercion.",
+      "body": "Explain purpose, risks/benefits, and alternatives in plain language. Offer options (timing, smaller steps, different staff approach) when feasible. Respect resident rights; avoid coercion; follow NYS DOH guidance and facility policy.",
       "next": "q_notify"
     },
     {
@@ -178,7 +178,7 @@
             },
             {
               "id": "notify",
-              "text": "Notified provider/supervisor/responsible party as indicated and documented outcome"
+              "text": "Notified provider/supervisor/responsible party as indicated and documented outcome per NYS DOH/facility policy"
             },
             {
               "id": "rights",

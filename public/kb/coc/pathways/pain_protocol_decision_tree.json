@@ -74,7 +74,7 @@
       "id": "pain_escalate",
       "type": "info",
       "title": "Red Flag \u2014 Escalate",
-      "body": "Follow facility emergency protocol and notify provider immediately. Obtain vitals if feasible without delaying emergency response. Document times and orders received.",
+      "body": "Follow facility emergency protocol (align with NYS DOH guidance) and notify provider immediately. Obtain vitals if feasible without delaying emergency response. Document times and orders received.",
       "next": "pain_followthrough"
     },
     {
@@ -164,7 +164,7 @@
             },
             {
               "id": "notify",
-              "text": "Notified provider/representative as appropriate; documented orders received"
+              "text": "Notified provider/representative as appropriate per NY requirements; documented orders received"
             },
             {
               "id": "monitor",
