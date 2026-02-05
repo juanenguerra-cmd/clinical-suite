@@ -29,27 +29,27 @@ const App: React.FC = () => {
   return (
     <div className="h-full min-h-0 flex flex-col md:flex-row">
       {/* Sidebar */}
-      <aside className="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 border-r border-slate-800">
-        <div className="p-6">
-          <h1 className="text-white text-xl font-black tracking-tight leading-tight">
+      <aside className="w-full md:w-64 bg-slate-900 text-slate-300 flex-shrink-0 border-b border-slate-800 md:border-b-0 md:border-r md:border-slate-800">
+        <div className="p-4 md:p-6">
+          <h1 className="text-white text-lg md:text-xl font-black tracking-tight leading-tight">
             CLINICAL<br/><span className="text-blue-400">DOCS</span> SUITE
           </h1>
-          <p className="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-widest">Facility Operations v1.0</p>
+          <p className="text-[9px] md:text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-widest">Facility Operations v1.0</p>
         </div>
         
-        <nav className="px-3 pb-6">
-          <ul className="space-y-1">
+        <nav className="px-3 pb-4 md:pb-6 overflow-x-auto md:overflow-visible">
+          <ul className="flex md:flex-col gap-2 md:gap-1 md:space-y-1 whitespace-nowrap">
             {navItems.map((item) => (
               <li key={item.id}>
                 <button
                   onClick={() => setActiveTool(item.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                  className={`w-full flex items-center gap-2 md:gap-3 px-3 py-2 md:py-2.5 rounded-full md:rounded-lg text-xs md:text-sm font-semibold transition-all ${
                     activeTool === item.id 
                       ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' 
                       : 'hover:bg-slate-800 hover:text-white'
                   }`}
                 >
-                  <span className="text-lg">{item.icon}</span>
+                  <span className="text-base md:text-lg">{item.icon}</span>
                   {item.label}
                 </button>
               </li>
