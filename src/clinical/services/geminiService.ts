@@ -19,7 +19,8 @@ export const polishNote = async (content: string): Promise<string> => {
       }
     });
 
-    return response.text?.trim() || content;
+    const text = typeof response.text === "function" ? await response.text() : response.text;
+    return text?.trim() || content;
   } catch (error) {
     console.error("AI Polish Error:", error);
     return content;
