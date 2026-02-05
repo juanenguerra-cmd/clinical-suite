@@ -18,6 +18,13 @@ type WizardNode =
   | { id: string; type: "summary"; outputs?: Record<string, any> };
 
 type Pathway = { id: string; title: string; version?: string; startNodeId: string; nodes: WizardNode[] };
+type CocGuide = {
+  title: string;
+  effective_date?: string;
+  review_by?: string;
+  references?: { source_id: string; note?: string }[];
+  sections?: { section_id: string; heading: string; text: string }[];
+};
 
 function prettyValue(val: any): string {
   if (val === null || val === undefined) return "";
@@ -50,6 +57,7 @@ function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
 }
 
 export function DecisionWizardTab() {
+  const kb = useAppStore((s: any) => s.kb);
   const wizard = useAppStore((s: any) => s.wizard);
   const packetDraft = useAppStore((s: any) => s.packetDraft);
   const actions = useAppStore((s: any) => s.actions);
@@ -69,10 +77,43 @@ export function DecisionWizardTab() {
 
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [selected, setSelected] = useState<Record<string, Record<string, boolean>>>({});
+  const [cocGuide, setCocGuide] = useState<CocGuide | null>(null);
+  const [cocGuideLoading, setCocGuideLoading] = useState(false);
+  const [cocGuideError, setCocGuideError] = useState<string | null>(null);
+  const [includeGovernance, setIncludeGovernance] = useState(false);
 
   useEffect(() => {
     if (step === 1) setSelectedProblem(null);
   }, [issueText, step]);
+
+  useEffect(() => {
+    if (step !== 3 || !includeGovernance || cocGuide || cocGuideLoading) return;
+    let cancelled = false;
+    setCocGuideLoading(true);
+    fetch("/kb/kb_change_of_condition.json")
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status} loading /kb/kb_change_of_condition.json`);
+        return (await r.json()) as CocGuide;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setCocGuide(data);
+        setCocGuideError(null);
+      })
+      .catch((e: any) => {
+        if (cancelled) return;
+        setCocGuide(null);
+        setCocGuideError(String(e?.message || e));
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setCocGuideLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [step, includeGovernance, cocGuide, cocGuideLoading]);
 
   useEffect(() => {
     setPathwayPath(selectedProblem?.pathway || null);
@@ -215,6 +256,30 @@ export function DecisionWizardTab() {
   const documentationSummary = useMemo(() => summarizeSection(documentationSection, selected), [documentationSection, selected]);
   const notificationsSummary = useMemo(() => summarizeSection(notificationSection, selected), [notificationSection, selected]);
 
+  const approvalStatus = kb?.manifest?.approval?.status;
+  const approvalWarning =
+    approvalStatus && approvalStatus !== "approved"
+      ? `KB status ${approvalStatus.toUpperCase()}: verify against facility policy before finalizing documentation.`
+      : "";
+
+  const referenceLine = useMemo(() => {
+    if (!cocGuide?.references?.length) return "";
+    const sources = kb?.sources || [];
+    const entries = cocGuide.references.map((ref) => {
+      const match = sources.find((s: any) => s.source_id === ref.source_id);
+      const title = match?.title || ref.source_id;
+      const note = ref.note ? ` (${ref.note})` : "";
+      return `${title}${note}`;
+    });
+    return entries.length ? `References: ${entries.join("; ")}.` : "";
+  }, [cocGuide, kb]);
+
+  const sectionLine = useMemo(() => {
+    if (!cocGuide?.sections?.length) return "";
+    const entries = cocGuide.sections.map((sec) => `${sec.heading} [${sec.section_id}]`);
+    return entries.length ? `Sections referenced: ${entries.join("; ")}.` : "";
+  }, [cocGuide]);
+
   const finalNote = useMemo(() => {
     const prob = issueText?.trim() ? issueText.trim() : "__";
     const label = selectedProblem?.label || "General change in condition";
@@ -226,12 +291,38 @@ export function DecisionWizardTab() {
       interventionsSummary ? `Interventions included ${interventionsSummary}.` : "",
       monitoringSummary ? `Monitoring plan: ${monitoringSummary}.` : "",
       documentationSummary ? `Documentation captured: ${documentationSummary}.` : "",
-      notificationsSummary ? `Notifications: ${notificationsSummary}.` : ""
+      notificationsSummary ? `Notifications: ${notificationsSummary}.` : "",
+      includeGovernance && cocGuide?.title ? `KB guidance: ${cocGuide.title}.` : "",
+      includeGovernance && cocGuide?.effective_date ? `KB effective: ${cocGuide.effective_date}.` : "",
+      includeGovernance && cocGuide?.review_by ? `Review by: ${cocGuide.review_by}.` : "",
+      includeGovernance ? referenceLine : "",
+      includeGovernance ? sectionLine : "",
+      includeGovernance && approvalWarning ? `Governance: ${approvalWarning}` : ""
     ];
     return lines.filter(Boolean).join(" ");
-  }, [issueText, selectedProblem, findingsLine, assessmentSummary, interventionsSummary, monitoringSummary, documentationSummary, notificationsSummary]);
+  }, [
+    issueText,
+    selectedProblem,
+    findingsLine,
+    assessmentSummary,
+    interventionsSummary,
+    monitoringSummary,
+    documentationSummary,
+    notificationsSummary,
+    cocGuide,
+    referenceLine,
+    sectionLine,
+    approvalWarning,
+    includeGovernance
+  ]);
 
   function goNext(next?: string) { setActiveNodeId(next || null); }
+
+  function retryPathwayFetch() {
+    if (!pathwayPath) return;
+    setPathwayError(null);
+    setPathwayPath(`${pathwayPath.split("?")[0]}?retry=${Date.now()}`);
+  }
 
   function onSinglePick(n: Extract<WizardNode, { type: "question_single" }>, val: string) {
     setAnswers((p) => ({ ...p, [n.id]: val }));
@@ -315,6 +406,7 @@ export function DecisionWizardTab() {
               value={issueText}
               onChange={(e) => setIssueText(e.target.value)}
               placeholder='Example: "Refusing meds since morning; more confused" or "Potassium 2.5" or "Chest pain radiating to jaw"'
+              aria-label="Describe the change in condition"
               style={{ width: "100%", minHeight: 90, padding: 10, borderRadius: 12, border: "1px solid #e5e7eb", fontFamily: "inherit" }}
             />
             <div style={{ display: "flex", gap: 8 }}>
@@ -369,6 +461,14 @@ export function DecisionWizardTab() {
                   <div style={{ border: "1px solid #fca5a5", borderRadius: 12, padding: 10 }}>
                     <div style={{ fontWeight: 800 }}>Could not load decision tree</div>
                     <div style={{ fontSize: 12, opacity: 0.9 }}>{pathwayError}</div>
+                    {pathwayPath ? (
+                      <div style={{ fontSize: 12, opacity: 0.8, marginTop: 6 }}>
+                        Path: {pathwayPath}
+                      </div>
+                    ) : null}
+                    <div style={{ marginTop: 8 }}>
+                      <Btn onClick={retryPathwayFetch} style={{ padding: "6px 10px" }}>Retry</Btn>
+                    </div>
                   </div>
                 ) : null}
 
@@ -501,6 +601,45 @@ export function DecisionWizardTab() {
         {step === 3 ? (
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ fontWeight: 800 }}>Progress note</div>
+            {approvalWarning ? (
+              <div style={{ border: "1px solid #f59e0b", borderRadius: 12, padding: 10, background: "#fffbeb" }}>
+                <div style={{ fontWeight: 800, color: "#92400e" }}>KB approval warning</div>
+                <div style={{ fontSize: 12, opacity: 0.9 }}>{approvalWarning}</div>
+              </div>
+            ) : null}
+            <div style={{ border: "1px solid #e5e7eb", borderRadius: 12, padding: 12, background: "#f8fafc" }}>
+              <div style={{ fontWeight: 800 }}>Governance metadata</div>
+              <div style={{ fontSize: 12, opacity: 0.8, marginTop: 4 }}>
+                Optional KB governance details can be added to the note for survey-ready documentation.
+              </div>
+              <label style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <input
+                  type="checkbox"
+                  checked={includeGovernance}
+                  onChange={(e) => setIncludeGovernance(e.target.checked)}
+                  aria-label="Include governance metadata in note"
+                />
+                <span style={{ fontSize: 12, fontWeight: 700 }}>Include governance metadata in note</span>
+              </label>
+              {cocGuideLoading ? (
+                <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6 }}>Loading governance references…</div>
+              ) : null}
+              {cocGuideError ? (
+                <div style={{ border: "1px solid #fca5a5", borderRadius: 10, padding: 8, marginTop: 8 }}>
+                  <div style={{ fontWeight: 800, fontSize: 12 }}>KB governance data unavailable</div>
+                  <div style={{ fontSize: 12, opacity: 0.9 }}>{cocGuideError}</div>
+                </div>
+              ) : null}
+              {cocGuide ? (
+                <div style={{ fontSize: 12, opacity: 0.85, marginTop: 8, display: "grid", gap: 4 }}>
+                  <div><strong>Guidance:</strong> {cocGuide.title}</div>
+                  {cocGuide.effective_date ? <div><strong>Effective:</strong> {cocGuide.effective_date}</div> : null}
+                  {cocGuide.review_by ? <div><strong>Review by:</strong> {cocGuide.review_by}</div> : null}
+                  {referenceLine ? <div>{referenceLine}</div> : null}
+                  {sectionLine ? <div>{sectionLine}</div> : null}
+                </div>
+              ) : null}
+            </div>
             <div style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 10 }}>
               <div style={{ fontWeight: 900 }}>Draft note</div>
               <textarea value={finalNote} readOnly style={{ width: "100%", minHeight: 130, marginTop: 8, padding: 10, borderRadius: 12, border: "1px solid #e5e7eb", fontFamily: "inherit" }} />
@@ -511,7 +650,16 @@ export function DecisionWizardTab() {
             <div style={{ display: "flex", gap: 8 }}>
               <Btn onClick={wizardBack}>Back</Btn>
               <div style={{ flex: 1 }} />
-              <Btn onClick={() => { try { actions?.wizardFinish?.(); } catch {} }}>Finish</Btn>
+              <Btn
+                onClick={() => {
+                  try {
+                    actions?.wizardApplyToPacket?.();
+                    actions?.openNoteModal?.();
+                  } catch {}
+                }}
+              >
+                Finish
+              </Btn>
             </div>
           </div>
         ) : null}

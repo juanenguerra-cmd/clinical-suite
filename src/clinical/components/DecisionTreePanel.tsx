@@ -1,17 +1,9 @@
-import React, { useEffect } from "react";
-import { loadKB } from "@/kb/loadKb";
+import React from "react";
 import { DecisionWizardTab } from "@/features/wizard/DecisionWizardTab";
 import { useAppStore } from "@/store/appStore";
 
 const DecisionTreePanel: React.FC = () => {
   const kb = useAppStore((s) => s.kb);
-  const actions = useAppStore((s) => s.actions);
-
-  useEffect(() => {
-    if (kb) return;
-    loadKB().then(actions.loadKb).catch(console.error);
-  }, [kb, actions]);
-
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
