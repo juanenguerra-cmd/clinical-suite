@@ -18,6 +18,13 @@ type WizardNode =
   | { id: string; type: "summary"; outputs?: Record<string, any> };
 
 type Pathway = { id: string; title: string; version?: string; startNodeId: string; nodes: WizardNode[] };
+type CocGuide = {
+  title: string;
+  effective_date?: string;
+  review_by?: string;
+  references?: { source_id: string; note?: string }[];
+  sections?: { section_id: string; heading: string; text: string }[];
+};
 
 function prettyValue(val: any): string {
   if (val === null || val === undefined) return "";
@@ -50,6 +57,7 @@ function Btn(props: React.ButtonHTMLAttributes<HTMLButtonElement>) {
 }
 
 export function DecisionWizardTab() {
+  const kb = useAppStore((s: any) => s.kb);
   const wizard = useAppStore((s: any) => s.wizard);
   const packetDraft = useAppStore((s: any) => s.packetDraft);
   const actions = useAppStore((s: any) => s.actions);
@@ -69,10 +77,35 @@ export function DecisionWizardTab() {
 
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [selected, setSelected] = useState<Record<string, Record<string, boolean>>>({});
+  const [cocGuide, setCocGuide] = useState<CocGuide | null>(null);
+  const [cocGuideError, setCocGuideError] = useState<string | null>(null);
 
   useEffect(() => {
     if (step === 1) setSelectedProblem(null);
   }, [issueText, step]);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/kb/kb_change_of_condition.json")
+      .then(async (r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status} loading /kb/kb_change_of_condition.json`);
+        return (await r.json()) as CocGuide;
+      })
+      .then((data) => {
+        if (cancelled) return;
+        setCocGuide(data);
+        setCocGuideError(null);
+      })
+      .catch((e: any) => {
+        if (cancelled) return;
+        setCocGuide(null);
+        setCocGuideError(String(e?.message || e));
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setPathwayPath(selectedProblem?.pathway || null);
@@ -215,6 +248,30 @@ export function DecisionWizardTab() {
   const documentationSummary = useMemo(() => summarizeSection(documentationSection, selected), [documentationSection, selected]);
   const notificationsSummary = useMemo(() => summarizeSection(notificationSection, selected), [notificationSection, selected]);
 
+  const approvalStatus = kb?.manifest?.approval?.status;
+  const approvalWarning =
+    approvalStatus && approvalStatus !== "approved"
+      ? `KB status ${approvalStatus.toUpperCase()}: verify against facility policy before finalizing documentation.`
+      : "";
+
+  const referenceLine = useMemo(() => {
+    if (!cocGuide?.references?.length) return "";
+    const sources = kb?.sources || [];
+    const entries = cocGuide.references.map((ref) => {
+      const match = sources.find((s: any) => s.source_id === ref.source_id);
+      const title = match?.title || ref.source_id;
+      const note = ref.note ? ` (${ref.note})` : "";
+      return `${title}${note}`;
+    });
+    return entries.length ? `References: ${entries.join("; ")}.` : "";
+  }, [cocGuide, kb]);
+
+  const sectionLine = useMemo(() => {
+    if (!cocGuide?.sections?.length) return "";
+    const entries = cocGuide.sections.map((sec) => `${sec.heading} [${sec.section_id}]`);
+    return entries.length ? `Sections referenced: ${entries.join("; ")}.` : "";
+  }, [cocGuide]);
+
   const finalNote = useMemo(() => {
     const prob = issueText?.trim() ? issueText.trim() : "__";
     const label = selectedProblem?.label || "General change in condition";
@@ -226,10 +283,29 @@ export function DecisionWizardTab() {
       interventionsSummary ? `Interventions included ${interventionsSummary}.` : "",
       monitoringSummary ? `Monitoring plan: ${monitoringSummary}.` : "",
       documentationSummary ? `Documentation captured: ${documentationSummary}.` : "",
-      notificationsSummary ? `Notifications: ${notificationsSummary}.` : ""
+      notificationsSummary ? `Notifications: ${notificationsSummary}.` : "",
+      cocGuide?.title ? `KB guidance: ${cocGuide.title}.` : "",
+      cocGuide?.effective_date ? `KB effective: ${cocGuide.effective_date}.` : "",
+      cocGuide?.review_by ? `Review by: ${cocGuide.review_by}.` : "",
+      referenceLine,
+      sectionLine,
+      approvalWarning ? `Governance: ${approvalWarning}` : ""
     ];
     return lines.filter(Boolean).join(" ");
-  }, [issueText, selectedProblem, findingsLine, assessmentSummary, interventionsSummary, monitoringSummary, documentationSummary, notificationsSummary]);
+  }, [
+    issueText,
+    selectedProblem,
+    findingsLine,
+    assessmentSummary,
+    interventionsSummary,
+    monitoringSummary,
+    documentationSummary,
+    notificationsSummary,
+    cocGuide,
+    referenceLine,
+    sectionLine,
+    approvalWarning
+  ]);
 
   function goNext(next?: string) { setActiveNodeId(next || null); }
 
@@ -501,6 +577,18 @@ export function DecisionWizardTab() {
         {step === 3 ? (
           <div style={{ display: "grid", gap: 10 }}>
             <div style={{ fontWeight: 800 }}>Progress note</div>
+            {approvalWarning ? (
+              <div style={{ border: "1px solid #f59e0b", borderRadius: 12, padding: 10, background: "#fffbeb" }}>
+                <div style={{ fontWeight: 800, color: "#92400e" }}>KB approval warning</div>
+                <div style={{ fontSize: 12, opacity: 0.9 }}>{approvalWarning}</div>
+              </div>
+            ) : null}
+            {cocGuideError ? (
+              <div style={{ border: "1px solid #fca5a5", borderRadius: 12, padding: 10 }}>
+                <div style={{ fontWeight: 800 }}>KB governance data unavailable</div>
+                <div style={{ fontSize: 12, opacity: 0.9 }}>{cocGuideError}</div>
+              </div>
+            ) : null}
             <div style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: 10 }}>
               <div style={{ fontWeight: 900 }}>Draft note</div>
               <textarea value={finalNote} readOnly style={{ width: "100%", minHeight: 130, marginTop: 8, padding: 10, borderRadius: 12, border: "1px solid #e5e7eb", fontFamily: "inherit" }} />
