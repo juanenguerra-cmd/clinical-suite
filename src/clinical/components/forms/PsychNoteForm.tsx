@@ -1,7 +1,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, Input, Select, Textarea, Button } from '../SharedUI';
-import { Recommendation } from '../../types';
+import type { Recommendation } from '../../types';
 import { polishNote } from '../../services/geminiService';
 
 const PsychNoteForm: React.FC = () => {
