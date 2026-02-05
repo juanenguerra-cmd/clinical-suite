@@ -45,11 +45,13 @@ a:hover { text-decoration: underline; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--bg);
 }
 
 .kbHeader {
   background: linear-gradient(180deg, #ffffff 0%, #f7f9fd 100%);
   border-bottom: 1px solid var(--border);
+  padding-top: env(safe-area-inset-top);
 }
 
 .kbHeaderInner {
@@ -106,6 +108,34 @@ a:hover { text-decoration: underline; }
   padding: 14px;
   min-height: 0;
   overflow: auto;
+  padding-bottom: calc(14px + env(safe-area-inset-bottom));
+}
+
+.kbAppMobile .kbHeaderInner {
+  grid-template-columns: 1fr;
+  text-align: center;
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.kbAppMobile .kbRight {
+  justify-content: center;
+  flex-wrap: wrap;
+  font-size: 11px;
+}
+
+.kbAppMobile .kbMain {
+  padding: 10px 12px calc(16px + env(safe-area-inset-bottom));
+  gap: 10px;
+}
+
+.kbAppMobile .panel {
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+.kbAppMobile .panelPad {
+  padding: 12px;
 }
 
 @media (max-width: 980px) {

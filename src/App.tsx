@@ -8,12 +8,29 @@ import { APP_VERSION } from "@/config/appVersion";
 export default function App() {
   const kb = useAppStore((s) => s.kb);
   const actions = useAppStore((s) => s.actions);
+  const [isMobile, setIsMobile] = React.useState(false);
   React.useEffect(() => {
     loadKB().then(actions.loadKb).catch(console.error);
   }, [actions]);
+  React.useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const mediaQuery = window.matchMedia(
+      "(max-width: 820px), (pointer: coarse)"
+    );
+    const updateMobile = () => setIsMobile(mediaQuery.matches);
+    updateMobile();
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", updateMobile);
+      return () => mediaQuery.removeEventListener("change", updateMobile);
+    }
+    mediaQuery.addListener(updateMobile);
+    return () => mediaQuery.removeListener(updateMobile);
+  }, []);
 
   return (
-    <div className="kbApp">
+    <div className={`kbApp ${isMobile ? "kbAppMobile" : ""}`}>
       <div className="kbHeader">
         <div className="kbHeaderInner">
           <div className="kbTitle">LTC/SNF Knowledge Base</div>
