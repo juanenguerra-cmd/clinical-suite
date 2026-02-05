@@ -1,10 +1,10 @@
 import * as React from "react";
-import { Link } from "react-router-dom";
 import { loadKB } from "@/kb/loadKb";
 import { useAppStore } from "@/store/appStore";
 import { OverviewPanel } from "@/features/home/OverviewPanel";
 import { DecisionWizardTab } from "@/features/wizard/DecisionWizardTab";
 import { ReleaseNotesButton } from "@/components/ReleaseNotesButton"; // ✅ ADD THIS
+import ClinicalApp from "@/clinical/ClinicalApp";
 
 export default function App() {
   const kb = useAppStore((s) => s.kb);
@@ -31,13 +31,8 @@ export default function App() {
               className={`kbTab ${activeTab === "wizard" ? "kbTabActive" : ""}`}
               onClick={() => actions.setTab("wizard")}
             >
-              Decision Wizard
+              Decision + Clinical Suite
             </button>
-
-            {/* Cross-app navigation */}
-            <Link className="kbTab" to="/suite" style={{ textDecoration: "none" }}>
-              Clinical Suite
-            </Link>
           </div>
 
           <div className="kbRight">
@@ -55,7 +50,17 @@ export default function App() {
       <div className="kbMain">
         <div className="panel panelPad" style={{ minWidth: 0 }}>
           {activeTab === "home" ? <OverviewPanel /> : null}
-          {activeTab === "wizard" ? <DecisionWizardTab /> : null}
+          {activeTab === "wizard" ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+              <DecisionWizardTab />
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 12 }}>
+                  Clinical Documentation Suite
+                </div>
+                <ClinicalApp />
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
