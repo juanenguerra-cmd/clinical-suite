@@ -1,5 +1,6 @@
 
 export type ToolType = 
+  | 'decision_tree'
   | 'psych' 
   | 'expiry' 
   | 'abx' 
