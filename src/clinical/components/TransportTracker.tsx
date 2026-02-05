@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Input, Select, Button, Textarea } from './SharedUI';
-import { TransportRow, CensusItem } from '../types';
+import type { TransportRow, CensusItem } from '../types';
 import { polishNote } from '../services/geminiService';
 
 const TransportTracker: React.FC = () => {

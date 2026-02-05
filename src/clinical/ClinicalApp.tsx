@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ToolType } from './types';
+import type { ToolType } from './types';
 import PsychNoteForm from './components/forms/PsychNoteForm';
 import TransportTracker from './components/TransportTracker';
 import ExpiryNoteForm from './components/forms/ExpiryNoteForm';

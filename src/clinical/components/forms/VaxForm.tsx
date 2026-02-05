@@ -1,6 +1,6 @@
 
 import React, { useState, useMemo } from 'react';
-import { Card, Input, Textarea, Button, Select } from '../SharedUI';
+import { Card, Textarea, Button, Select } from '../SharedUI';
 import { polishNote } from '../../services/geminiService';
 
 const VaxForm: React.FC = () => {
