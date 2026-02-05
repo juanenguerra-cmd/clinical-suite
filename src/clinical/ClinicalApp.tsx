@@ -10,12 +10,14 @@ import ObservationNoteForm from './components/forms/ObservationNoteForm';
 import NewAdmissionForm from './components/forms/NewAdmissionForm';
 import VaxForm from './components/forms/VaxForm';
 import COCForm from './components/forms/COCForm';
+import DecisionTreePanel from './components/DecisionTreePanel';
 
 const App: React.FC = () => {
   const [activeTool, setActiveTool] = useState<ToolType>('transport');
 
   const navItems: { id: ToolType; label: string; icon: string }[] = [
     { id: 'transport', label: 'Transport Tracker', icon: '🚐' },
+    { id: 'decision_tree', label: 'Decision Tree', icon: '🧭' },
     { id: 'psych', label: 'Psych Consult', icon: '🧠' },
     { id: 'coc', label: 'Change of Condition', icon: '⚠️' },
     { id: 'admission', label: 'New Admission', icon: '📝' },
@@ -79,6 +81,7 @@ const App: React.FC = () => {
 
         <div className="p-4 md:p-8 max-w-7xl mx-auto">
           {activeTool === 'transport' && <TransportTracker />}
+          {activeTool === 'decision_tree' && <DecisionTreePanel />}
           {activeTool === 'psych' && <PsychNoteForm />}
           {activeTool === 'expiry' && <ExpiryNoteForm />}
           {activeTool === 'abx' && <AbxNoteForm />}
