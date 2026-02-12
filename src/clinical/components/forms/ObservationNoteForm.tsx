@@ -232,8 +232,9 @@ const ObservationNoteForm: React.FC = () => {
     setIsPolishing(true);
     try {
       const polished = await polishNote(generatedNote);
-      // Update text fields with polished content
       alert('✨ AI Polish complete! Review the enhanced note.');
+      // Note: polishNote returns a string but doesn't modify form fields
+      // You may want to display the polished note in a modal or replace the preview
     } catch (error) {
       alert('❌ AI Polish failed. Please try again.');
     } finally {
@@ -348,6 +349,7 @@ const ObservationNoteForm: React.FC = () => {
               <select
                 value={formData.shift}
                 onChange={e => handleInputChange('shift', e.target.value)}
+                className="form-select"
               >
                 <option value="">Select…</option>
                 <option value="Day shift">Day shift</option>
@@ -386,4 +388,13 @@ const ObservationNoteForm: React.FC = () => {
               <Input
                 type="text"
                 value={formData.hr}
-                onChange={e =>
+                onChange={e => handleInputChange('hr', e.target.value)}
+                placeholder="82"
+              />
+            </div>
+            <div className="form-group">
+              <label>RR</label>
+              <Input
+                type="text"
+                value={formData.rr}
+                onChange={e => handleInputChange('rr
