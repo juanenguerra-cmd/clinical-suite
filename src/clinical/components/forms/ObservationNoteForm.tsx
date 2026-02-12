@@ -1,6 +1,4 @@
-import React, { useState, useMemo } from 'react';
-import { Card, Input, Textarea, Button } from '../../../SharedUI';
-import { polishNote } from '../../../../services/geminiService';
+import React, { useMemo, useState } from 'react';
 import './forms.css';
 
 interface ObservationFormData {
@@ -40,125 +38,114 @@ const FOCUSED_ASSESSMENTS: Omit<FocusedAssessment, 'enabled' | 'details'>[] = [
   { key: 'safety', label: 'Fall/Safety', outLabel: 'Fall/safety assessment' },
 ];
 
+const EMPTY_FORM: ObservationFormData = {
+  admissionType: '',
+  admissionDate: '',
+  shift: '',
+  location: '',
+  temp: '',
+  hr: '',
+  rr: '',
+  bp: '',
+  spo2: '',
+  bs: '',
+  complaints: '',
+  assessment: '',
+  interventions: '',
+  response: '',
+  notify: '',
+};
+
+const clean = (txt: string): string => (txt || '').replace(/\s+/g, ' ').trim();
+const capFirst = (txt: string): string => {
+  const c = clean(txt);
+  return c ? c.charAt(0).toUpperCase() + c.slice(1) : '';
+};
+const ensurePeriod = (txt: string): string => {
+  const c = clean(txt);
+  return c ? (/[.!?]$/.test(c) ? c : `${c}.`) : '';
+};
+const joinSentences = (parts: string[]) =>
+  parts
+    .map(s => s.trim())
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s+\./g, '.')
+    .replace(/\.\.+/g, '.')
+    .trim();
+
 const ObservationNoteForm: React.FC = () => {
-  const [formData, setFormData] = useState<ObservationFormData>({
-    admissionType: '',
-    admissionDate: '',
-    shift: '',
-    location: '',
-    temp: '',
-    hr: '',
-    rr: '',
-    bp: '',
-    spo2: '',
-    bs: '',
-    complaints: '',
-    assessment: '',
-    interventions: '',
-    response: '',
-    notify: '',
-  });
-
+  const [formData, setFormData] = useState<ObservationFormData>(EMPTY_FORM);
   const [focusedAssessments, setFocusedAssessments] = useState<FocusedAssessment[]>(
-    FOCUSED_ASSESSMENTS.map(fa => ({ ...fa, enabled: false, details: '' }))
+    FOCUSED_ASSESSMENTS.map(item => ({ ...item, enabled: false, details: '' }))
   );
+  const [copySuccess, setCopySuccess] = useState(false);
 
-  const [isPolishing, setIsPolishing] = useState(false);
-
-  // Auto-calculate admission day
   const admissionDay = useMemo(() => {
     if (!formData.admissionDate) return '';
-    
-    const admDate = new Date(formData.admissionDate + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const diffTime = today.getTime() - admDate.getTime();
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    
-    if (diffDays >= 1 && diffDays <= 7) {
-      return `Day ${diffDays}/7`;
-    } else if (diffDays > 7) {
-      return `Outside Day 1–7 (Day ${diffDays})`;
-    } else if (diffDays < 1) {
-      return 'Invalid date (future date)';
-    }
-    return '';
+    const [y, m, d] = formData.admissionDate.split('-').map(Number);
+    const adm = new Date(y, m - 1, d, 12, 0, 0);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+    const diffDays = Math.floor((today.getTime() - adm.getTime()) / (24 * 60 * 60 * 1000)) + 1;
+
+    if (diffDays >= 1 && diffDays <= 7) return `Day ${diffDays}/7`;
+    return `Outside Day 1–7 (Day ${diffDays})`;
   }, [formData.admissionDate]);
 
-  // Generate vitals string
   const vitalsString = useMemo(() => {
-    const vitals = [];
-    if (formData.temp) vitals.push(`T ${formData.temp}`);
-    if (formData.hr) vitals.push(`HR ${formData.hr}`);
-    if (formData.rr) vitals.push(`RR ${formData.rr}`);
-    if (formData.bp) vitals.push(`BP ${formData.bp}`);
-    if (formData.spo2) vitals.push(`O₂ sat ${formData.spo2}`);
-    if (formData.bs) vitals.push(`BS ${formData.bs}`);
+    const vitals = [
+      formData.temp ? `T ${formData.temp}` : '',
+      formData.hr ? `HR ${formData.hr}` : '',
+      formData.rr ? `RR ${formData.rr}` : '',
+      formData.bp ? `BP ${formData.bp}` : '',
+      formData.spo2 ? `O₂ sat ${formData.spo2}` : '',
+      formData.bs ? `BS ${formData.bs}` : '',
+    ].filter(Boolean);
     return vitals.length ? vitals.join(', ') : '';
-  }, [formData.temp, formData.hr, formData.rr, formData.bp, formData.spo2, formData.bs]);
+  }, [formData]);
 
-  // Helper functions
-  const clean = (txt: string): string => txt.trim().replace(/\s+/g, ' ');
-  const capFirst = (s: string): string => {
-    const cleaned = clean(s);
-    return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : '';
-  };
-  const ensurePeriod = (s: string): string => {
-    const cleaned = clean(s);
-    return cleaned ? (/[.!?]$/.test(cleaned) ? cleaned : cleaned + '.') : '';
-  };
+  const focusBlocks = useMemo(
+    () =>
+      focusedAssessments
+        .map(item =>
+          item.enabled && item.details
+            ? ensurePeriod(`${item.outLabel}: ${capFirst(item.details)}`)
+            : ''
+        )
+        .filter(Boolean),
+    [focusedAssessments]
+  );
 
-  // Build focused assessment blocks
-  const focusedBlocks = useMemo(() => {
-    return focusedAssessments
-      .filter(fa => fa.enabled && fa.details)
-      .map(fa => ensurePeriod(`${fa.outLabel}: ${capFirst(fa.details)}`));
-  }, [focusedAssessments]);
-
-  // Generate note
   const generatedNote = useMemo(() => {
-    const headerParts = [];
-    if (formData.admissionType && admissionDay) {
-      headerParts.push(`${formData.admissionType} ${admissionDay}`);
-    } else if (admissionDay) {
-      headerParts.push(admissionDay);
-    }
-    if (formData.shift) headerParts.push(formData.shift);
+    const header = ensurePeriod(
+      [formData.admissionType ? `${formData.admissionType} ${admissionDay}` : admissionDay, formData.shift]
+        .filter(Boolean)
+        .join(' – ')
+    );
 
-    const header = headerParts.length ? ensurePeriod(headerParts.join(' – ')) : '';
-    const locLine = formData.location ? ensurePeriod(`Location: ${formData.location}`) : '';
-    const vitLine = vitalsString ? ensurePeriod(`Vital signs: ${vitalsString}`) : '';
-
-    const comp = ensurePeriod(capFirst(formData.complaints));
-    const assess = ensurePeriod(capFirst(formData.assessment));
-    const inter = ensurePeriod(capFirst(formData.interventions));
-    const resp = ensurePeriod(capFirst(formData.response));
-    const note = ensurePeriod(capFirst(formData.notify));
-
-    const parts = [
+    return joinSentences([
       header,
-      locLine,
-      vitLine,
-      comp ? `Resident report/concerns: ${comp}` : '',
-      assess ? `General observations: ${assess}` : '',
-      ...focusedBlocks,
-      inter ? `Interventions/actions: ${inter}` : '',
-      resp ? `Response/outcome: ${resp}` : '',
-      note ? `Notifications/escalation: ${note}` : '',
-    ];
+      formData.location ? ensurePeriod(`Location: ${formData.location}`) : '',
+      vitalsString ? ensurePeriod(`Vital signs: ${vitalsString}`) : '',
+      formData.complaints ? `Resident report/concerns: ${ensurePeriod(capFirst(formData.complaints))}` : '',
+      formData.assessment ? `General observations: ${ensurePeriod(capFirst(formData.assessment))}` : '',
+      ...focusBlocks,
+      formData.interventions
+        ? `Interventions/actions: ${ensurePeriod(capFirst(formData.interventions))}`
+        : '',
+      formData.response ? `Response/outcome: ${ensurePeriod(capFirst(formData.response))}` : '',
+      formData.notify ? `Notifications/escalation: ${ensurePeriod(capFirst(formData.notify))}` : '',
+    ]);
+  }, [admissionDay, formData, focusBlocks, vitalsString]);
 
-    return parts
-      .filter(Boolean)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .replace(/\s+\./g, '.')
-      .replace(/\.\s+/g, '. ')
-      .replace(/\.\.+/g, '.')
-      .trim();
-  }, [formData, admissionDay, vitalsString, focusedBlocks]);
+  const missingFields = useMemo(() => {
+    const missing: string[] = [];
+    if (!admissionDay) missing.push('Admission day (enter admission date)');
+    return missing;
+  }, [admissionDay]);
 
-  // Auto-checks
   const autoChecks = useMemo(() => {
     const anyNarrative = !!(
       formData.complaints ||
@@ -166,48 +153,42 @@ const ObservationNoteForm: React.FC = () => {
       formData.interventions ||
       formData.response ||
       formData.notify ||
-      focusedBlocks.length
+      focusBlocks.length
     );
 
     return [
-      { label: 'Admission day selected', passed: !!admissionDay && !admissionDay.includes('Invalid') },
+      { label: 'Admission day selected', passed: !!admissionDay },
       { label: 'Some narrative documented', passed: anyNarrative },
       { label: 'Vitals entered (recommended)', passed: !!vitalsString },
     ];
-  }, [admissionDay, formData, vitalsString, focusedBlocks.length]);
+  }, [admissionDay, focusBlocks.length, formData, vitalsString]);
 
-  // Validation
-  const missingFields = useMemo(() => {
-    const missing: string[] = [];
-    if (!admissionDay || admissionDay.includes('Invalid')) missing.push('Valid admission date');
-    return missing;
-  }, [admissionDay]);
+  const previewText =
+    missingFields.length > 0
+      ? `Missing required fields (copy disabled):\n- ${missingFields.join('\n- ')}\n\n--- Preview (partial) ---\n\n${generatedNote}`
+      : generatedNote || 'Fill the form to generate the note preview…';
 
   const handleInputChange = (field: keyof ObservationFormData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleFocusedAssessmentToggle = (key: string) => {
+  const handleFocusedToggle = (key: string) => {
     setFocusedAssessments(prev =>
-      prev.map(fa =>
-        fa.key === key ? { ...fa, enabled: !fa.enabled, details: fa.enabled ? '' : fa.details } : fa
+      prev.map(item =>
+        item.key === key
+          ? { ...item, enabled: !item.enabled, details: item.enabled ? '' : item.details }
+          : item
       )
     );
   };
 
-  const handleFocusedAssessmentDetails = (key: string, details: string) => {
-    setFocusedAssessments(prev =>
-      prev.map(fa => (fa.key === key ? { ...fa, details } : fa))
-    );
+  const handleFocusedDetails = (key: string, details: string) => {
+    setFocusedAssessments(prev => prev.map(item => (item.key === key ? { ...item, details } : item)));
   };
 
   const handleCopyNote = async () => {
-    if (missingFields.length) {
-      alert(`Missing required fields:
-- ${missingFields.join('
-- ')}`);
-      return;
-    }
+    if (missingFields.length || !generatedNote) return;
+
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(generatedNote);
@@ -221,342 +202,192 @@ const ObservationNoteForm: React.FC = () => {
         document.execCommand('copy');
         document.body.removeChild(textarea);
       }
-      alert('✅ Note copied to clipboard!');
-    } catch (err) {
-      alert('❌ Failed to copy. Please select and copy manually.');
-    }
-  };
-
-  const handlePolish = async () => {
-    if (!generatedNote) return;
-    
-    setIsPolishing(true);
-    try {
-      const polished = await polishNote(generatedNote);
-      alert('✨ AI Polish complete! Review the enhanced note.');
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 1200);
     } catch (error) {
-      alert('❌ AI Polish failed. Please try again.');
-    } finally {
-      setIsPolishing(false);
+      alert(`Copy failed. Select manually.\n\n${error instanceof Error ? error.message : ''}`);
     }
   };
 
   const handleOptimize = () => {
-    const optimized = { ...formData };
-    (Object.keys(optimized) as Array<keyof ObservationFormData>).forEach(key => {
-      if (typeof optimized[key] === 'string') {
-        optimized[key] = clean(optimized[key] as string) as any;
-      }
+    setFormData(prev => {
+      const next = { ...prev };
+      (Object.keys(next) as Array<keyof ObservationFormData>).forEach(key => {
+        next[key] = clean(next[key]) as never;
+      });
+      return next;
     });
-    setFormData(optimized);
-    setFocusedAssessments(prev =>
-      prev.map(fa => ({ ...fa, details: clean(fa.details) }))
-    );
+
+    setFocusedAssessments(prev => prev.map(item => ({ ...item, details: clean(item.details) })));
   };
 
   const handleClear = () => {
-    if (window.confirm('Clear all form data?')) {
-      setFormData({
-        admissionType: '',
-        admissionDate: '',
-        shift: '',
-        location: '',
-        temp: '',
-        hr: '',
-        rr: '',
-        bp: '',
-        spo2: '',
-        bs: '',
-        complaints: '',
-        assessment: '',
-        interventions: '',
-        response: '',
-        notify: '',
-      });
-      setFocusedAssessments(
-        FOCUSED_ASSESSMENTS.map(fa => ({ ...fa, enabled: false, details: '' }))
-      );
-    }
+    setFormData(EMPTY_FORM);
+    setFocusedAssessments(FOCUSED_ASSESSMENTS.map(item => ({ ...item, enabled: false, details: '' })));
+    setCopySuccess(false);
   };
 
   return (
-    <div className=\"clinical-form-container\">
-      <div className=\"form-header\">
-        <h2>7-Day Admission Observation – Shift Progress Note</h2>
-        <p>Daily shift note with Day 1-7 auto-calculation & focused assessments</p>
+    <div className="obs-wrap">
+      <div className="obs-header">
+        <div>
+          <h1>7-Day Admission Observation – Shift Progress Note</h1>
+          <p>Daily shift note with Day 1-7 auto-calculation &amp; focused assessments</p>
+        </div>
       </div>
 
-      <div className=\"form-grid\">
-        {/* LEFT COLUMN - Header */}
-        <Card className=\"form-section\">
-          <h3>Header</h3>
-          
-          <div className=\"form-group\">
-            <label>Admission type</label>
-            <div className=\"radio-group\">
-              <label>
-                <input
-                  type=\"radio\"
-                  checked={formData.admissionType === ''}
-                  onChange={() => handleInputChange('admissionType', '')}
-                />
-                None
-              </label>
-              <label>
-                <input
-                  type=\"radio\"
-                  checked={formData.admissionType === 'New Admission'}
-                  onChange={() => handleInputChange('admissionType', 'New Admission')}
-                />
-                New Admission
-              </label>
-              <label>
-                <input
-                  type=\"radio\"
-                  checked={formData.admissionType === 'Re-Admission'}
-                  onChange={() => handleInputChange('admissionType', 'Re-Admission')}
-                />
-                Re-Admission
-              </label>
-            </div>
+      <div className="obs-grid">
+        <section className="obs-card">
+          <h2>Header</h2>
+          <label>Admission type</label>
+          <div className="obs-radios">
+            <label>
+              <input
+                type="radio"
+                name="admType"
+                checked={formData.admissionType === ''}
+                onChange={() => handleInputChange('admissionType', '')}
+              />
+              None
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="admType"
+                checked={formData.admissionType === 'New Admission'}
+                onChange={() => handleInputChange('admissionType', 'New Admission')}
+              />
+              New Admission
+            </label>
+            <label>
+              <input
+                type="radio"
+                name="admType"
+                checked={formData.admissionType === 'Re-Admission'}
+                onChange={() => handleInputChange('admissionType', 'Re-Admission')}
+              />
+              Re-Admission
+            </label>
           </div>
 
-          <div className=\"form-row\">
-            <div className=\"form-group\">
-              <label>Admission date</label>
-              <Input
-                type=\"date\"
+          <div className="obs-row">
+            <div>
+              <label htmlFor="admissionDate">Admission date</label>
+              <input
+                id="admissionDate"
+                type="date"
                 value={formData.admissionDate}
                 onChange={e => handleInputChange('admissionDate', e.target.value)}
               />
             </div>
-            <div className=\"form-group\">
-              <label>Admission day (auto)</label>
-              <Input
-                type=\"text\"
-                value={admissionDay}
-                readOnly
-                className=\"readonly-input\"
-                placeholder=\"Auto-calculated\"
-              />
+            <div>
+              <label htmlFor="admissionDayAuto">Admission day (auto)</label>
+              <input id="admissionDayAuto" className="obs-locked" value={admissionDay} readOnly placeholder="Auto-calculated" />
             </div>
-            <div className=\"form-group\">
-              <label>Shift</label>
-              <select
-                value={formData.shift}
-                onChange={e => handleInputChange('shift', e.target.value)}
-                className=\"form-select\"
-              >
-                <option value=\"\">Select…</option>
-                <option value=\"Day shift\">Day shift</option>
-                <option value=\"Evening shift\">Evening shift</option>
-                <option value=\"Night shift\">Night shift</option>
+            <div>
+              <label htmlFor="shift">Shift</label>
+              <select id="shift" value={formData.shift} onChange={e => handleInputChange('shift', e.target.value)}>
+                <option value="">Select…</option>
+                <option value="Day shift">Day shift</option>
+                <option value="Evening shift">Evening shift</option>
+                <option value="Night shift">Night shift</option>
               </select>
             </div>
-            <div className=\"form-group\">
-              <label>Location</label>
-              <Input
-                type=\"text\"
+            <div>
+              <label htmlFor="location">Location</label>
+              <input
+                id="location"
+                type="text"
                 value={formData.location}
                 onChange={e => handleInputChange('location', e.target.value)}
-                placeholder=\"Unit / Room\"
+                placeholder="Unit / Room"
               />
             </div>
           </div>
-        </Card>
+        </section>
 
-        {/* RIGHT COLUMN - Vital Signs */}
-        <Card className=\"form-section\">
-          <h3>Vital signs (optional)</h3>
-          <div className=\"form-row\">
-            <div className=\"form-group\">
-              <label>Temp</label>
-              <Input
-                type=\"text\"
-                value={formData.temp}
-                onChange={e => handleInputChange('temp', e.target.value)}
-                placeholder=\"98.6°F\"
-              />
-            </div>
-            <div className=\"form-group\">
-              <label>HR</label>
-              <Input
-                type=\"text\"
-                value={formData.hr}
-                onChange={e => handleInputChange('hr', e.target.value)}
-                placeholder=\"82\"
-              />
-            </div>
-            <div className=\"form-group\">
-              <label>RR</label>
-              <Input
-                type=\"text\"
-                value={formData.rr}
-                onChange={e => handleInputChange('rr', e.target.value)}
-                placeholder=\"18\"
-              />
-            </div>
-            <div className=\"form-group\">
-              <label>BP</label>
-              <Input
-                type=\"text\"
-                value={formData.bp}
-                onChange={e => handleInputChange('bp', e.target.value)}
-                placeholder=\"120/78\"
-              />
-            </div>
-            <div className=\"form-group\">
-              <label>O₂ Sat</label>
-              <Input
-                type=\"text\"
-                value={formData.spo2}
-                onChange={e => handleInputChange('spo2', e.target.value)}
-                placeholder=\"97% RA\"
-              />
-            </div>
-            <div className=\"form-group\">
-              <label>BS</label>
-              <Input
-                type=\"text\"
-                value={formData.bs}
-                onChange={e => handleInputChange('bs', e.target.value)}
-                placeholder=\"120 mg/dL\"
-              />
-            </div>
+        <section className="obs-card">
+          <h2>Vital signs (optional)</h2>
+          <div className="obs-row">
+            <div><label>Temp</label><input type="text" value={formData.temp} onChange={e => handleInputChange('temp', e.target.value)} placeholder="98.6°F" /></div>
+            <div><label>HR</label><input type="text" value={formData.hr} onChange={e => handleInputChange('hr', e.target.value)} placeholder="82" /></div>
+            <div><label>RR</label><input type="text" value={formData.rr} onChange={e => handleInputChange('rr', e.target.value)} placeholder="18" /></div>
+            <div><label>BP</label><input type="text" value={formData.bp} onChange={e => handleInputChange('bp', e.target.value)} placeholder="120/78" /></div>
+            <div><label>O₂ Sat</label><input type="text" value={formData.spo2} onChange={e => handleInputChange('spo2', e.target.value)} placeholder="97% RA" /></div>
+            <div><label>BS (if applicable)</label><input type="text" value={formData.bs} onChange={e => handleInputChange('bs', e.target.value)} placeholder="120 mg/dL" /></div>
           </div>
-        </Card>
+        </section>
 
-        {/* FULL-WIDTH - Shift Summary */}
-        <Card className=\"form-section full-width\">
-          <h3>Shift summary</h3>
-          <div className=\"form-group\">
-            <label>Resident complaints or concerns</label>
-            <Textarea
-              value={formData.complaints}
-              onChange={e => handleInputChange('complaints', e.target.value)}
-              placeholder=\"Denies pain/CP/SOB; reports nausea; dizziness when standing…\"
-            />
-          </div>
-          <div className=\"form-group\">
-            <label>General objective observations</label>
-            <Textarea
-              value={formData.assessment}
-              onChange={e => handleInputChange('assessment', e.target.value)}
-              placeholder=\"Alert, at baseline; no acute distress; skin intact…\"
-            />
-          </div>
-          <div className=\"form-group\">
-            <label>Interventions / actions taken</label>
-            <Textarea
-              value={formData.interventions}
-              onChange={e => handleInputChange('interventions', e.target.value)}
-              placeholder=\"Offered fluids; repositioned; PRN given per order…\"
-            />
-          </div>
-          <div className=\"form-group\">
-            <label>Response / outcome</label>
-            <Textarea
-              value={formData.response}
-              onChange={e => handleInputChange('response', e.target.value)}
-              placeholder=\"Symptoms improved; resting comfortably…\"
-            />
-          </div>
-          <div className=\"form-group\">
-            <label>Escalation / notifications</label>
-            <Textarea
-              value={formData.notify}
-              onChange={e => handleInputChange('notify', e.target.value)}
-              placeholder=\"MD notified; new orders received…\"
-            />
-          </div>
-        </Card>
+        <section className="obs-card obs-full-width">
+          <h2>Shift summary</h2>
+          <label>Resident complaints or concerns</label>
+          <textarea value={formData.complaints} onChange={e => handleInputChange('complaints', e.target.value)} placeholder="Denies pain/CP/SOB; reports nausea; dizziness when standing…" />
 
-        {/* FULL-WIDTH - Focused Assessments */}
-        <Card className=\"form-section full-width\">
-          <h3>Focused assessments</h3>
-          <p className=\"help-text\">Check only systems you assessed; free-text appears only if checked.</p>
-          <div className=\"focused-assessments-grid\">
-            {focusedAssessments.map(fa => (
-              <div key={fa.key} className=\"focused-item\">
-                <label className=\"checkbox-label\">
-                  <input
-                    type=\"checkbox\"
-                    checked={fa.enabled}
-                    onChange={() => handleFocusedAssessmentToggle(fa.key)}
-                  />
-                  {fa.label}
-                </label>
-                {fa.enabled && (
-                  <Textarea
-                    value={fa.details}
-                    onChange={e => handleFocusedAssessmentDetails(fa.key, e.target.value)}
-                    placeholder={`${fa.label} details…`}
-                    className=\"focused-textarea\"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
+          <label>General objective observations</label>
+          <textarea value={formData.assessment} onChange={e => handleInputChange('assessment', e.target.value)} placeholder="Alert, at baseline; no acute distress; skin intact…" />
 
-        {/* FULL-WIDTH - Auto Checks */}
-        <Card className=\"form-section full-width\">
-          <h3>Auto checks</h3>
-          <p className=\"help-text\">For nurse reference – not included in final note.</p>
-          <div className=\"pill-group\">
+          <label>Interventions / actions taken</label>
+          <textarea value={formData.interventions} onChange={e => handleInputChange('interventions', e.target.value)} placeholder="Offered fluids; repositioned; PRN given per order…" />
+
+          <label>Response / outcome</label>
+          <textarea value={formData.response} onChange={e => handleInputChange('response', e.target.value)} placeholder="Symptoms improved; resting comfortably…" />
+
+          <label>Escalation / notifications</label>
+          <textarea value={formData.notify} onChange={e => handleInputChange('notify', e.target.value)} placeholder="MD notified; new orders received…" />
+        </section>
+
+        <section className="obs-card obs-full-width">
+          <h2>Focused assessments</h2>
+          <div className="obs-help">Check only systems you assessed; free-text appears only if checked.</div>
+          <fieldset>
+            <legend>Systems assessed this shift</legend>
+            <div className="obs-check-grid">
+              {focusedAssessments.map(item => (
+                <div key={item.key} className="obs-check-item">
+                  <label>
+                    <input type="checkbox" checked={item.enabled} onChange={() => handleFocusedToggle(item.key)} /> {item.label}
+                  </label>
+                  {item.enabled && (
+                    <textarea
+                      value={item.details}
+                      onChange={e => handleFocusedDetails(item.key, e.target.value)}
+                      placeholder={`${item.label} details…`}
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          </fieldset>
+        </section>
+
+        <section className="obs-card obs-full-width">
+          <h2>Auto checks</h2>
+          <div className="obs-help">For nurse reference – not included in final note.</div>
+          <div className="obs-checks">
             {autoChecks.map(check => (
-              <span key={check.label} className={`pill ${check.passed ? 'passed' : 'warning'}`}>
+              <span key={check.label} className="obs-pill">
                 {check.passed ? '✅' : '⚠️'} {check.label}
               </span>
             ))}
           </div>
-        </Card>
+        </section>
 
-        {/* PREVIEW & ACTIONS */}
-        <Card className=\"form-section full-width preview-section\">
-          <h3>Preview</h3>
-          <div className={`preview-box ${missingFields.length ? 'invalid' : ''}`}>
-            {missingFields.length ? (
-              <div className=\"missing-fields\">
-                <p>Missing required fields (copy disabled):</p>
-                <ul>
-                  {missingFields.map(m => <li key={m}>{m}</li>)}
-                </ul>
-                <hr />
-                <p className=\"preview-partial-label\">--- Preview (partial) ---</p>
-                {generatedNote}
-              </div>
-            ) : (
-              generatedNote || 'Fill the form to generate the note preview…'
-            )}
-          </div>
-
-          <div className=\"form-actions\">
-            <Button
-              variant=\"primary\"
-              onClick={handleCopyNote}
-              disabled={!!missingFields.length}
-            >
-              Copy Note
-            </Button>
-            <Button
-              variant=\"secondary\"
-              onClick={handlePolish}
-              disabled={isPolishing || !generatedNote}
-            >
-              {isPolishing ? 'Polishing...' : 'Optimise Note'}
-            </Button>
-            <Button
-              variant=\"outline\"
-              onClick={handleClear}
-            >
+        <section className="obs-card obs-full-width">
+          <h2>Preview</h2>
+          <div className={`obs-preview ${missingFields.length ? 'err' : ''}`}>{previewText}</div>
+          <div className="obs-actions">
+            <button className="obs-btn primary" type="button" onClick={handleCopyNote} disabled={missingFields.length > 0}>
+              {copySuccess ? 'Copied ✅' : 'Copy Note'}
+            </button>
+            <button className="obs-btn pink" type="button" onClick={handleOptimize}>
+              Optimise Note
+            </button>
+            <button className="obs-btn gray" type="button" onClick={handleClear}>
               Clear
-            </Button>
+            </button>
           </div>
-          <p className=\"audit-reminder\">
-            <strong>Audit reminder:</strong> Verify accuracy before signing.
-          </p>
-        </Card>
+          <div className="obs-help"><strong className="obs-audit">Audit reminder:</strong> Verify accuracy before signing.</div>
+        </section>
       </div>
     </div>
   );
