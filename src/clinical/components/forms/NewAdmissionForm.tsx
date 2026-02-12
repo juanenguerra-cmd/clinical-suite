@@ -321,7 +321,7 @@ const NewAdmissionForm: React.FC = () => {
 ').map((s: string) => s.trim()).filter(Boolean);
     if (secDx.length) lines.push(`Secondary diagnoses include ${secDx.join(', ')}.`);
 
-    if (data.orientation) lines.push(`On arrival, orientation: ${data.orientation}.`);
+    if (data.orientation) lines.push(`On arrival, orientation: ${data.orientat'\n')
     if (data.allergies) lines.push(`Allergies per admission record: ${data.allergies}.`);
 
     const v = [];
@@ -355,7 +355,7 @@ const NewAdmissionForm: React.FC = () => {
 ').map((s: string) => s.trim()).filter(Boolean);
     if (held.length) lines.push(`Following due medications were held on admission pending delivery: ${held.join(', ')}.`);
 
-    lines.push(`Will continue to monitor and notify the provider of any significant change in condition.`);
+    lines.push(`Will continue to monitor and notify the provider of any significant change in condi'\n')
 
     return lines.join(' ').replace(/\s{2,}/g, ' ').trim();
   }, [data, selectedInterventions]);
