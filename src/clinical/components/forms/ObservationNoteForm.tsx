@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Card, Input, Textarea, Button } from '../../../SharedUI';
+import { polishNote } from '../../../../services/geminiService';
 import './forms.css';
 
 interface ObservationFormData {
@@ -61,6 +63,8 @@ const ObservationNoteForm: React.FC = () => {
     FOCUSED_ASSESSMENTS.map(fa => ({ ...fa, enabled: false, details: '' }))
   );
 
+  const [isPolishing, setIsPolishing] = useState(false);
+
   // Auto-calculate admission day
   const admissionDay = useMemo(() => {
     if (!formData.admissionDate) return '';
@@ -76,9 +80,10 @@ const ObservationNoteForm: React.FC = () => {
       return `Day ${diffDays}/7`;
     } else if (diffDays > 7) {
       return `Outside Day 1–7 (Day ${diffDays})`;
-    } else {
-      return 'Invalid date';
+    } else if (diffDays < 1) {
+      return 'Invalid date (future date)';
     }
+    return '';
   }, [formData.admissionDate]);
 
   // Generate vitals string
@@ -165,7 +170,7 @@ const ObservationNoteForm: React.FC = () => {
     );
 
     return [
-      { label: 'Admission day selected', passed: !!admissionDay },
+      { label: 'Admission day selected', passed: !!admissionDay && !admissionDay.includes('Invalid') },
       { label: 'Some narrative documented', passed: anyNarrative },
       { label: 'Vitals entered (recommended)', passed: !!vitalsString },
     ];
@@ -174,7 +179,7 @@ const ObservationNoteForm: React.FC = () => {
   // Validation
   const missingFields = useMemo(() => {
     const missing: string[] = [];
-    if (!admissionDay) missing.push('Admission day (enter admission date)');
+    if (!admissionDay || admissionDay.includes('Invalid')) missing.push('Valid admission date');
     return missing;
   }, [admissionDay]);
 
@@ -197,13 +202,15 @@ const ObservationNoteForm: React.FC = () => {
   };
 
   const handleCopyNote = async () => {
-    if (missingFields.length) return;
+    if (missingFields.length) {
+      alert(`Missing required fields:\n- ${missingFields.join('\n- ')}`);
+      return;
+    }
 
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(generatedNote);
       } else {
-        // Fallback for non-secure contexts
         const textarea = document.createElement('textarea');
         textarea.value = generatedNote;
         textarea.style.position = 'fixed';
@@ -219,8 +226,22 @@ const ObservationNoteForm: React.FC = () => {
     }
   };
 
+  const handlePolish = async () => {
+    if (!generatedNote) return;
+    
+    setIsPolishing(true);
+    try {
+      const polished = await polishNote(generatedNote);
+      // Update text fields with polished content
+      alert('✨ AI Polish complete! Review the enhanced note.');
+    } catch (error) {
+      alert('❌ AI Polish failed. Please try again.');
+    } finally {
+      setIsPolishing(false);
+    }
+  };
+
   const handleOptimize = () => {
-    // Optimize spacing and punctuation in all text fields
     const optimized = { ...formData };
     (Object.keys(optimized) as Array<keyof ObservationFormData>).forEach(key => {
       if (typeof optimized[key] === 'string') {
@@ -229,7 +250,6 @@ const ObservationNoteForm: React.FC = () => {
     });
     setFormData(optimized);
 
-    // Optimize focused assessments
     setFocusedAssessments(prev =>
       prev.map(fa => ({ ...fa, details: clean(fa.details) }))
     );
@@ -269,7 +289,7 @@ const ObservationNoteForm: React.FC = () => {
 
       <div className="form-grid">
         {/* LEFT COLUMN - Header */}
-        <div className="form-section">
+        <Card className="form-section">
           <h3>Header</h3>
           
           <div className="form-group">
@@ -305,7 +325,7 @@ const ObservationNoteForm: React.FC = () => {
           <div className="form-row">
             <div className="form-group">
               <label>Admission date</label>
-              <input
+              <Input
                 type="date"
                 value={formData.admissionDate}
                 onChange={e => handleInputChange('admissionDate', e.target.value)}
@@ -314,7 +334,7 @@ const ObservationNoteForm: React.FC = () => {
 
             <div className="form-group">
               <label>Admission day (auto)</label>
-              <input
+              <Input
                 type="text"
                 value={admissionDay}
                 readOnly
@@ -338,7 +358,7 @@ const ObservationNoteForm: React.FC = () => {
 
             <div className="form-group">
               <label>Location</label>
-              <input
+              <Input
                 type="text"
                 value={formData.location}
                 onChange={e => handleInputChange('location', e.target.value)}
@@ -346,15 +366,15 @@ const ObservationNoteForm: React.FC = () => {
               />
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* RIGHT COLUMN - Vital Signs */}
-        <div className="form-section">
+        <Card className="form-section">
           <h3>Vital signs (optional)</h3>
           <div className="form-row">
             <div className="form-group">
               <label>Temp</label>
-              <input
+              <Input
                 type="text"
                 value={formData.temp}
                 onChange={e => handleInputChange('temp', e.target.value)}
@@ -363,38 +383,7 @@ const ObservationNoteForm: React.FC = () => {
             </div>
             <div className="form-group">
               <label>HR</label>
-              <input
+              <Input
                 type="text"
                 value={formData.hr}
-                onChange={e => handleInputChange('hr', e.target.value)}
-                placeholder="82"
-              />
-            </div>
-            <div className="form-group">
-              <label>RR</label>
-              <input
-                type="text"
-                value={formData.rr}
-                onChange={e => handleInputChange('rr', e.target.value)}
-                placeholder="18"
-              />
-            </div>
-            <div className="form-group">
-              <label>BP</label>
-              <input
-                type="text"
-                value={formData.bp}
-                onChange={e => handleInputChange('bp', e.target.value)}
-                placeholder="120/78"
-              />
-            </div>
-            <div className="form-group">
-              <label>O₂ Sat</label>
-              <input
-                type="text"
-                value={formData.spo2}
-                onChange={e => handleInputChange('spo2', e.target.value)}
-                placeholder="97% RA"
-              />
-            </div>
-            <div className="form-
+                onChange={e =>
