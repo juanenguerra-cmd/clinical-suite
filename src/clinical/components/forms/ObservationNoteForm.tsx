@@ -1,68 +1,400 @@
+import React, { useState, useMemo, useEffect } from 'react';
+import './forms.css';
 
-import React, { useState, useMemo } from 'react';
-import { Card, Input, Textarea, Button } from '../SharedUI';
-import { polishNote } from '../../services/geminiService';
+interface ObservationFormData {
+  admissionType: '' | 'New Admission' | 'Re-Admission';
+  admissionDate: string;
+  shift: string;
+  location: string;
+  temp: string;
+  hr: string;
+  rr: string;
+  bp: string;
+  spo2: string;
+  bs: string;
+  complaints: string;
+  assessment: string;
+  interventions: string;
+  response: string;
+  notify: string;
+}
+
+interface FocusedAssessment {
+  key: string;
+  label: string;
+  outLabel: string;
+  enabled: boolean;
+  details: string;
+}
+
+const FOCUSED_ASSESSMENTS: Omit<FocusedAssessment, 'enabled' | 'details'>[] = [
+  { key: 'resp', label: 'Respiratory', outLabel: 'Respiratory assessment' },
+  { key: 'card', label: 'Cardiac/Circulatory', outLabel: 'Cardiac/circulatory assessment' },
+  { key: 'neuro', label: 'Neuro/Mental', outLabel: 'Neuro/mental status' },
+  { key: 'gi', label: 'GI/Bowel', outLabel: 'GI/bowel assessment' },
+  { key: 'gu', label: 'GU/Urinary', outLabel: 'GU/urinary assessment' },
+  { key: 'skin', label: 'Skin', outLabel: 'Skin assessment' },
+  { key: 'pain', label: 'Pain', outLabel: 'Pain assessment' },
+  { key: 'safety', label: 'Fall/Safety', outLabel: 'Fall/safety assessment' },
+];
 
 const ObservationNoteForm: React.FC = () => {
-  const [data, setData] = useState({
-    admDate: '',
-    day: '',
-    vitals: '',
-    summary: '',
+  const [formData, setFormData] = useState<ObservationFormData>({
+    admissionType: '',
+    admissionDate: '',
+    shift: '',
+    location: '',
+    temp: '',
+    hr: '',
+    rr: '',
+    bp: '',
+    spo2: '',
+    bs: '',
+    complaints: '',
+    assessment: '',
     interventions: '',
-    response: 'Resting comfortably.'
+    response: '',
+    notify: '',
   });
 
-  const [isPolishing, setIsPolishing] = useState(false);
+  const [focusedAssessments, setFocusedAssessments] = useState<FocusedAssessment[]>(
+    FOCUSED_ASSESSMENTS.map(fa => ({ ...fa, enabled: false, details: '' }))
+  );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setData({ ...data, [e.target.name]: e.target.value });
+  // Auto-calculate admission day
+  const admissionDay = useMemo(() => {
+    if (!formData.admissionDate) return '';
+    
+    const admDate = new Date(formData.admissionDate + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const diffTime = today.getTime() - admDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    
+    if (diffDays >= 1 && diffDays <= 7) {
+      return `Day ${diffDays}/7`;
+    } else if (diffDays > 7) {
+      return `Outside Day 1–7 (Day ${diffDays})`;
+    } else {
+      return 'Invalid date';
+    }
+  }, [formData.admissionDate]);
+
+  // Generate vitals string
+  const vitalsString = useMemo(() => {
+    const vitals = [];
+    if (formData.temp) vitals.push(`T ${formData.temp}`);
+    if (formData.hr) vitals.push(`HR ${formData.hr}`);
+    if (formData.rr) vitals.push(`RR ${formData.rr}`);
+    if (formData.bp) vitals.push(`BP ${formData.bp}`);
+    if (formData.spo2) vitals.push(`O₂ sat ${formData.spo2}`);
+    if (formData.bs) vitals.push(`BS ${formData.bs}`);
+    return vitals.length ? vitals.join(', ') : '';
+  }, [formData.temp, formData.hr, formData.rr, formData.bp, formData.spo2, formData.bs]);
+
+  // Helper functions
+  const clean = (txt: string): string => txt.trim().replace(/\s+/g, ' ');
+  const capFirst = (s: string): string => {
+    const cleaned = clean(s);
+    return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : '';
+  };
+  const ensurePeriod = (s: string): string => {
+    const cleaned = clean(s);
+    return cleaned ? (/[.!?]$/.test(cleaned) ? cleaned : cleaned + '.') : '';
   };
 
-  const generatedNote = useMemo(() => {
-    return `Admission Observation Day ${data.day}/7. Vitals: ${data.vitals}. Shift summary: ${data.summary}. Interventions: ${data.interventions}. Response: ${data.response}`;
-  }, [data]);
+  // Build focused assessment blocks
+  const focusedBlocks = useMemo(() => {
+    return focusedAssessments
+      .filter(fa => fa.enabled && fa.details)
+      .map(fa => ensurePeriod(`${fa.outLabel}: ${capFirst(fa.details)}`));
+  }, [focusedAssessments]);
 
-  const handlePolish = async () => {
-    if (!generatedNote) return;
-    setIsPolishing(true);
-    const polished = await polishNote(generatedNote);
-    alert("AI Polished version has been copied to your clipboard!");
-    navigator.clipboard.writeText(polished);
-    setIsPolishing(false);
+  // Generate note
+  const generatedNote = useMemo(() => {
+    const headerParts = [];
+    if (formData.admissionType && admissionDay) {
+      headerParts.push(`${formData.admissionType} ${admissionDay}`);
+    } else if (admissionDay) {
+      headerParts.push(admissionDay);
+    }
+    if (formData.shift) headerParts.push(formData.shift);
+    
+    const header = headerParts.length ? ensurePeriod(headerParts.join(' – ')) : '';
+    const locLine = formData.location ? ensurePeriod(`Location: ${formData.location}`) : '';
+    const vitLine = vitalsString ? ensurePeriod(`Vital signs: ${vitalsString}`) : '';
+    
+    const comp = ensurePeriod(capFirst(formData.complaints));
+    const assess = ensurePeriod(capFirst(formData.assessment));
+    const inter = ensurePeriod(capFirst(formData.interventions));
+    const resp = ensurePeriod(capFirst(formData.response));
+    const note = ensurePeriod(capFirst(formData.notify));
+
+    const parts = [
+      header,
+      locLine,
+      vitLine,
+      comp ? `Resident report/concerns: ${comp}` : '',
+      assess ? `General observations: ${assess}` : '',
+      ...focusedBlocks,
+      inter ? `Interventions/actions: ${inter}` : '',
+      resp ? `Response/outcome: ${resp}` : '',
+      note ? `Notifications/escalation: ${note}` : '',
+    ];
+
+    return parts
+      .filter(Boolean)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .replace(/\s+\./g, '.')
+      .replace(/\.\s+/g, '. ')
+      .replace(/\.\.+/g, '.')
+      .trim();
+  }, [formData, admissionDay, vitalsString, focusedBlocks]);
+
+  // Auto-checks
+  const autoChecks = useMemo(() => {
+    const anyNarrative = !!(
+      formData.complaints ||
+      formData.assessment ||
+      formData.interventions ||
+      formData.response ||
+      formData.notify ||
+      focusedBlocks.length
+    );
+
+    return [
+      { label: 'Admission day selected', passed: !!admissionDay },
+      { label: 'Some narrative documented', passed: anyNarrative },
+      { label: 'Vitals entered (recommended)', passed: !!vitalsString },
+    ];
+  }, [admissionDay, formData, vitalsString, focusedBlocks.length]);
+
+  // Validation
+  const missingFields = useMemo(() => {
+    const missing: string[] = [];
+    if (!admissionDay) missing.push('Admission day (enter admission date)');
+    return missing;
+  }, [admissionDay]);
+
+  const handleInputChange = (field: keyof ObservationFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleFocusedAssessmentToggle = (key: string) => {
+    setFocusedAssessments(prev =>
+      prev.map(fa =>
+        fa.key === key ? { ...fa, enabled: !fa.enabled, details: fa.enabled ? '' : fa.details } : fa
+      )
+    );
+  };
+
+  const handleFocusedAssessmentDetails = (key: string, details: string) => {
+    setFocusedAssessments(prev =>
+      prev.map(fa => (fa.key === key ? { ...fa, details } : fa))
+    );
+  };
+
+  const handleCopyNote = async () => {
+    if (missingFields.length) return;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(generatedNote);
+      } else {
+        // Fallback for non-secure contexts
+        const textarea = document.createElement('textarea');
+        textarea.value = generatedNote;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      alert('✅ Note copied to clipboard!');
+    } catch (err) {
+      alert('❌ Failed to copy. Please select and copy manually.');
+    }
+  };
+
+  const handleOptimize = () => {
+    // Optimize spacing and punctuation in all text fields
+    const optimized = { ...formData };
+    (Object.keys(optimized) as Array<keyof ObservationFormData>).forEach(key => {
+      if (typeof optimized[key] === 'string') {
+        optimized[key] = clean(optimized[key] as string) as any;
+      }
+    });
+    setFormData(optimized);
+
+    // Optimize focused assessments
+    setFocusedAssessments(prev =>
+      prev.map(fa => ({ ...fa, details: clean(fa.details) }))
+    );
+  };
+
+  const handleClear = () => {
+    if (confirm('Clear all form data?')) {
+      setFormData({
+        admissionType: '',
+        admissionDate: '',
+        shift: '',
+        location: '',
+        temp: '',
+        hr: '',
+        rr: '',
+        bp: '',
+        spo2: '',
+        bs: '',
+        complaints: '',
+        assessment: '',
+        interventions: '',
+        response: '',
+        notify: '',
+      });
+      setFocusedAssessments(
+        FOCUSED_ASSESSMENTS.map(fa => ({ ...fa, enabled: false, details: '' }))
+      );
+    }
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div className="space-y-6">
-        <Card title="Admission Tracking">
-          <div className="grid grid-cols-2 gap-4">
-            <Input label="Admit Date" name="admDate" type="date" value={data.admDate} onChange={handleChange} />
-            <Input label="Day #" name="day" value={data.day} onChange={handleChange} placeholder="e.g. 3" />
-          </div>
-          <Input label="Vitals" name="vitals" value={data.vitals} onChange={handleChange} placeholder="T 98.6, BP 120/80" />
-        </Card>
-        <Card title="Shift Details">
-          <Textarea label="Observations" name="summary" value={data.summary} onChange={handleChange} />
-          <Textarea label="Interventions" name="interventions" value={data.interventions} onChange={handleChange} />
-          <Input label="Response" name="response" value={data.response} onChange={handleChange} />
-        </Card>
+    <div className="clinical-form-container">
+      <div className="form-header">
+        <h2>7-Day Admission Observation – Shift Progress Note</h2>
+        <p>Daily shift note with Day 1-7 auto-calculation & focused assessments</p>
       </div>
-      <div className="sticky top-24">
-        <Card title="Live Note Preview">
-          <div className="bg-slate-900 text-slate-200 p-6 rounded-xl font-mono text-sm min-h-[300px] whitespace-pre-wrap leading-relaxed">
-            {generatedNote}
-          </div>
-          <div className="mt-4 flex gap-2">
-            <Button onClick={() => navigator.clipboard.writeText(generatedNote)} className="flex-1">Copy Note</Button>
-            <Button variant="secondary" onClick={handlePolish} disabled={isPolishing} className="flex-1">
-              {isPolishing ? 'Polishing...' : '✨ AI Polish'}
-            </Button>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-};
 
-export default ObservationNoteForm;
+      <div className="form-grid">
+        {/* LEFT COLUMN - Header */}
+        <div className="form-section">
+          <h3>Header</h3>
+          
+          <div className="form-group">
+            <label>Admission type</label>
+            <div className="radio-group">
+              <label>
+                <input
+                  type="radio"
+                  checked={formData.admissionType === ''}
+                  onChange={() => handleInputChange('admissionType', '')}
+                />
+                None
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={formData.admissionType === 'New Admission'}
+                  onChange={() => handleInputChange('admissionType', 'New Admission')}
+                />
+                New Admission
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  checked={formData.admissionType === 'Re-Admission'}
+                  onChange={() => handleInputChange('admissionType', 'Re-Admission')}
+                />
+                Re-Admission
+              </label>
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Admission date</label>
+              <input
+                type="date"
+                value={formData.admissionDate}
+                onChange={e => handleInputChange('admissionDate', e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Admission day (auto)</label>
+              <input
+                type="text"
+                value={admissionDay}
+                readOnly
+                className="readonly-input"
+                placeholder="Auto-calculated"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Shift</label>
+              <select
+                value={formData.shift}
+                onChange={e => handleInputChange('shift', e.target.value)}
+              >
+                <option value="">Select…</option>
+                <option value="Day shift">Day shift</option>
+                <option value="Evening shift">Evening shift</option>
+                <option value="Night shift">Night shift</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Location</label>
+              <input
+                type="text"
+                value={formData.location}
+                onChange={e => handleInputChange('location', e.target.value)}
+                placeholder="Unit / Room"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN - Vital Signs */}
+        <div className="form-section">
+          <h3>Vital signs (optional)</h3>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Temp</label>
+              <input
+                type="text"
+                value={formData.temp}
+                onChange={e => handleInputChange('temp', e.target.value)}
+                placeholder="98.6°F"
+              />
+            </div>
+            <div className="form-group">
+              <label>HR</label>
+              <input
+                type="text"
+                value={formData.hr}
+                onChange={e => handleInputChange('hr', e.target.value)}
+                placeholder="82"
+              />
+            </div>
+            <div className="form-group">
+              <label>RR</label>
+              <input
+                type="text"
+                value={formData.rr}
+                onChange={e => handleInputChange('rr', e.target.value)}
+                placeholder="18"
+              />
+            </div>
+            <div className="form-group">
+              <label>BP</label>
+              <input
+                type="text"
+                value={formData.bp}
+                onChange={e => handleInputChange('bp', e.target.value)}
+                placeholder="120/78"
+              />
+            </div>
+            <div className="form-group">
+              <label>O₂ Sat</label>
+              <input
+                type="text"
+                value={formData.spo2}
+                onChange={e => handleInputChange('spo2', e.target.value)}
+                placeholder="97% RA"
+              />
+            </div>
+            <div className="form-
