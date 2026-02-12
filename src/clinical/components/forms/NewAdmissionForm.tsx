@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Input, Textarea, Button, Select } from '../SharedUI';
-import { polishNote } from '../../../services/geminiService';
+import { polishNote } from '../../services/geminiService';
 
 const carePlanLibrary: Record<string, { goal: string; ints: string[] }> = {
   "Abuse Prevention: Risk of Victimization": {
@@ -317,11 +317,10 @@ const NewAdmissionForm: React.FC = () => {
 
     if (data.primaryDx) lines.push(`Primary problems on admission include ${data.primaryDx}.`);
     
-    const secDx = data.secondaryDx.split('
-').map((s: string) => s.trim()).filter(Boolean);
+    const secDx = data.secondaryDx.split('\n').map((s: string) => s.trim()).filter(Boolean);
     if (secDx.length) lines.push(`Secondary diagnoses include ${secDx.join(', ')}.`);
 
-    if (data.orientation) lines.push(`On arrival, orientation: ${data.orientat'\n')
+    if (data.orientation) lines.push(`On arrival, orientation: ${data.orientation}.`);
     if (data.allergies) lines.push(`Allergies per admission record: ${data.allergies}.`);
 
     const v = [];
@@ -351,11 +350,10 @@ const NewAdmissionForm: React.FC = () => {
     if (data.vaccines) lines.push(data.vaccines + (data.vaccines.endsWith('.') ? '' : '.'));
     if (data.providerNote) lines.push(data.providerNote + (data.providerNote.endsWith('.') ? '' : '.'));
 
-    const held = data.heldMeds.split('
-').map((s: string) => s.trim()).filter(Boolean);
+    const held = data.heldMeds.split('\n').map((s: string) => s.trim()).filter(Boolean);
     if (held.length) lines.push(`Following due medications were held on admission pending delivery: ${held.join(', ')}.`);
 
-    lines.push(`Will continue to monitor and notify the provider of any significant change in condi'\n')
+    lines.push('Will continue to monitor and notify the provider of any significant change in condition.');
 
     return lines.join(' ').replace(/\s{2,}/g, ' ').trim();
   }, [data, selectedInterventions]);
@@ -507,7 +505,7 @@ const NewAdmissionForm: React.FC = () => {
         </div>
         <div className="flex gap-4 mt-6">
           <Button onClick={() => navigator.clipboard.writeText(generatedNote)}>Copy Note</Button>
-          <Button onClick={handlePolish} loading={isPolishing} variant="secondary">Polish with AI</Button>
+          <Button onClick={handlePolish} disabled={isPolishing} variant="secondary">{isPolishing ? 'Polishing...' : 'Polish with AI'}</Button>
           <Button onClick={() => setData({
             admitDate: '', admitTime: '', admitType: 'New admission', age: '', sex: '', unit: '', room: '', arrivalVia: '', fromFacility: '',
             primaryDx: '', secondaryDx: '', allergies: '', diet: '', liquids: '', temp: '', rr: '', hr: '', bp: '', o2: '', o2mode: 'room air',
