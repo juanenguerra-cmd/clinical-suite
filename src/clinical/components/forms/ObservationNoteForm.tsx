@@ -125,11 +125,11 @@ const ObservationNoteForm: React.FC = () => {
       headerParts.push(admissionDay);
     }
     if (formData.shift) headerParts.push(formData.shift);
-    
+
     const header = headerParts.length ? ensurePeriod(headerParts.join(' – ')) : '';
     const locLine = formData.location ? ensurePeriod(`Location: ${formData.location}`) : '';
     const vitLine = vitalsString ? ensurePeriod(`Vital signs: ${vitalsString}`) : '';
-    
+
     const comp = ensurePeriod(capFirst(formData.complaints));
     const assess = ensurePeriod(capFirst(formData.assessment));
     const inter = ensurePeriod(capFirst(formData.interventions));
@@ -203,10 +203,11 @@ const ObservationNoteForm: React.FC = () => {
 
   const handleCopyNote = async () => {
     if (missingFields.length) {
-      alert(`Missing required fields:\n- ${missingFields.join('\n- ')}`);
+      alert(`Missing required fields:
+- ${missingFields.join('
+- ')}`);
       return;
     }
-
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(generatedNote);
@@ -233,8 +234,6 @@ const ObservationNoteForm: React.FC = () => {
     try {
       const polished = await polishNote(generatedNote);
       alert('✨ AI Polish complete! Review the enhanced note.');
-      // Note: polishNote returns a string but doesn't modify form fields
-      // You may want to display the polished note in a modal or replace the preview
     } catch (error) {
       alert('❌ AI Polish failed. Please try again.');
     } finally {
@@ -250,14 +249,13 @@ const ObservationNoteForm: React.FC = () => {
       }
     });
     setFormData(optimized);
-
     setFocusedAssessments(prev =>
       prev.map(fa => ({ ...fa, details: clean(fa.details) }))
     );
   };
 
   const handleClear = () => {
-    if (confirm('Clear all form data?')) {
+    if (window.confirm('Clear all form data?')) {
       setFormData({
         admissionType: '',
         admissionDate: '',
@@ -282,23 +280,23 @@ const ObservationNoteForm: React.FC = () => {
   };
 
   return (
-    <div className="clinical-form-container">
-      <div className="form-header">
+    <div className=\"clinical-form-container\">
+      <div className=\"form-header\">
         <h2>7-Day Admission Observation – Shift Progress Note</h2>
         <p>Daily shift note with Day 1-7 auto-calculation & focused assessments</p>
       </div>
 
-      <div className="form-grid">
+      <div className=\"form-grid\">
         {/* LEFT COLUMN - Header */}
-        <Card className="form-section">
+        <Card className=\"form-section\">
           <h3>Header</h3>
           
-          <div className="form-group">
+          <div className=\"form-group\">
             <label>Admission type</label>
-            <div className="radio-group">
+            <div className=\"radio-group\">
               <label>
                 <input
-                  type="radio"
+                  type=\"radio\"
                   checked={formData.admissionType === ''}
                   onChange={() => handleInputChange('admissionType', '')}
                 />
@@ -306,7 +304,7 @@ const ObservationNoteForm: React.FC = () => {
               </label>
               <label>
                 <input
-                  type="radio"
+                  type=\"radio\"
                   checked={formData.admissionType === 'New Admission'}
                   onChange={() => handleInputChange('admissionType', 'New Admission')}
                 />
@@ -314,7 +312,7 @@ const ObservationNoteForm: React.FC = () => {
               </label>
               <label>
                 <input
-                  type="radio"
+                  type=\"radio\"
                   checked={formData.admissionType === 'Re-Admission'}
                   onChange={() => handleInputChange('admissionType', 'Re-Admission')}
                 />
@@ -323,78 +321,245 @@ const ObservationNoteForm: React.FC = () => {
             </div>
           </div>
 
-          <div className="form-row">
-            <div className="form-group">
+          <div className=\"form-row\">
+            <div className=\"form-group\">
               <label>Admission date</label>
               <Input
-                type="date"
+                type=\"date\"
                 value={formData.admissionDate}
                 onChange={e => handleInputChange('admissionDate', e.target.value)}
               />
             </div>
-
-            <div className="form-group">
+            <div className=\"form-group\">
               <label>Admission day (auto)</label>
               <Input
-                type="text"
+                type=\"text\"
                 value={admissionDay}
                 readOnly
-                className="readonly-input"
-                placeholder="Auto-calculated"
+                className=\"readonly-input\"
+                placeholder=\"Auto-calculated\"
               />
             </div>
-
-            <div className="form-group">
+            <div className=\"form-group\">
               <label>Shift</label>
               <select
                 value={formData.shift}
                 onChange={e => handleInputChange('shift', e.target.value)}
-                className="form-select"
+                className=\"form-select\"
               >
-                <option value="">Select…</option>
-                <option value="Day shift">Day shift</option>
-                <option value="Evening shift">Evening shift</option>
-                <option value="Night shift">Night shift</option>
+                <option value=\"\">Select…</option>
+                <option value=\"Day shift\">Day shift</option>
+                <option value=\"Evening shift\">Evening shift</option>
+                <option value=\"Night shift\">Night shift</option>
               </select>
             </div>
-
-            <div className="form-group">
+            <div className=\"form-group\">
               <label>Location</label>
               <Input
-                type="text"
+                type=\"text\"
                 value={formData.location}
                 onChange={e => handleInputChange('location', e.target.value)}
-                placeholder="Unit / Room"
+                placeholder=\"Unit / Room\"
               />
             </div>
           </div>
         </Card>
 
         {/* RIGHT COLUMN - Vital Signs */}
-        <Card className="form-section">
+        <Card className=\"form-section\">
           <h3>Vital signs (optional)</h3>
-          <div className="form-row">
-            <div className="form-group">
+          <div className=\"form-row\">
+            <div className=\"form-group\">
               <label>Temp</label>
               <Input
-                type="text"
+                type=\"text\"
                 value={formData.temp}
                 onChange={e => handleInputChange('temp', e.target.value)}
-                placeholder="98.6°F"
+                placeholder=\"98.6°F\"
               />
             </div>
-            <div className="form-group">
+            <div className=\"form-group\">
               <label>HR</label>
               <Input
-                type="text"
+                type=\"text\"
                 value={formData.hr}
                 onChange={e => handleInputChange('hr', e.target.value)}
-                placeholder="82"
+                placeholder=\"82\"
               />
             </div>
-            <div className="form-group">
+            <div className=\"form-group\">
               <label>RR</label>
               <Input
-                type="text"
+                type=\"text\"
                 value={formData.rr}
-                onChange={e => handleInputChange('rr
+                onChange={e => handleInputChange('rr', e.target.value)}
+                placeholder=\"18\"
+              />
+            </div>
+            <div className=\"form-group\">
+              <label>BP</label>
+              <Input
+                type=\"text\"
+                value={formData.bp}
+                onChange={e => handleInputChange('bp', e.target.value)}
+                placeholder=\"120/78\"
+              />
+            </div>
+            <div className=\"form-group\">
+              <label>O₂ Sat</label>
+              <Input
+                type=\"text\"
+                value={formData.spo2}
+                onChange={e => handleInputChange('spo2', e.target.value)}
+                placeholder=\"97% RA\"
+              />
+            </div>
+            <div className=\"form-group\">
+              <label>BS</label>
+              <Input
+                type=\"text\"
+                value={formData.bs}
+                onChange={e => handleInputChange('bs', e.target.value)}
+                placeholder=\"120 mg/dL\"
+              />
+            </div>
+          </div>
+        </Card>
+
+        {/* FULL-WIDTH - Shift Summary */}
+        <Card className=\"form-section full-width\">
+          <h3>Shift summary</h3>
+          <div className=\"form-group\">
+            <label>Resident complaints or concerns</label>
+            <Textarea
+              value={formData.complaints}
+              onChange={e => handleInputChange('complaints', e.target.value)}
+              placeholder=\"Denies pain/CP/SOB; reports nausea; dizziness when standing…\"
+            />
+          </div>
+          <div className=\"form-group\">
+            <label>General objective observations</label>
+            <Textarea
+              value={formData.assessment}
+              onChange={e => handleInputChange('assessment', e.target.value)}
+              placeholder=\"Alert, at baseline; no acute distress; skin intact…\"
+            />
+          </div>
+          <div className=\"form-group\">
+            <label>Interventions / actions taken</label>
+            <Textarea
+              value={formData.interventions}
+              onChange={e => handleInputChange('interventions', e.target.value)}
+              placeholder=\"Offered fluids; repositioned; PRN given per order…\"
+            />
+          </div>
+          <div className=\"form-group\">
+            <label>Response / outcome</label>
+            <Textarea
+              value={formData.response}
+              onChange={e => handleInputChange('response', e.target.value)}
+              placeholder=\"Symptoms improved; resting comfortably…\"
+            />
+          </div>
+          <div className=\"form-group\">
+            <label>Escalation / notifications</label>
+            <Textarea
+              value={formData.notify}
+              onChange={e => handleInputChange('notify', e.target.value)}
+              placeholder=\"MD notified; new orders received…\"
+            />
+          </div>
+        </Card>
+
+        {/* FULL-WIDTH - Focused Assessments */}
+        <Card className=\"form-section full-width\">
+          <h3>Focused assessments</h3>
+          <p className=\"help-text\">Check only systems you assessed; free-text appears only if checked.</p>
+          <div className=\"focused-assessments-grid\">
+            {focusedAssessments.map(fa => (
+              <div key={fa.key} className=\"focused-item\">
+                <label className=\"checkbox-label\">
+                  <input
+                    type=\"checkbox\"
+                    checked={fa.enabled}
+                    onChange={() => handleFocusedAssessmentToggle(fa.key)}
+                  />
+                  {fa.label}
+                </label>
+                {fa.enabled && (
+                  <Textarea
+                    value={fa.details}
+                    onChange={e => handleFocusedAssessmentDetails(fa.key, e.target.value)}
+                    placeholder={`${fa.label} details…`}
+                    className=\"focused-textarea\"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* FULL-WIDTH - Auto Checks */}
+        <Card className=\"form-section full-width\">
+          <h3>Auto checks</h3>
+          <p className=\"help-text\">For nurse reference – not included in final note.</p>
+          <div className=\"pill-group\">
+            {autoChecks.map(check => (
+              <span key={check.label} className={`pill ${check.passed ? 'passed' : 'warning'}`}>
+                {check.passed ? '✅' : '⚠️'} {check.label}
+              </span>
+            ))}
+          </div>
+        </Card>
+
+        {/* PREVIEW & ACTIONS */}
+        <Card className=\"form-section full-width preview-section\">
+          <h3>Preview</h3>
+          <div className={`preview-box ${missingFields.length ? 'invalid' : ''}`}>
+            {missingFields.length ? (
+              <div className=\"missing-fields\">
+                <p>Missing required fields (copy disabled):</p>
+                <ul>
+                  {missingFields.map(m => <li key={m}>{m}</li>)}
+                </ul>
+                <hr />
+                <p className=\"preview-partial-label\">--- Preview (partial) ---</p>
+                {generatedNote}
+              </div>
+            ) : (
+              generatedNote || 'Fill the form to generate the note preview…'
+            )}
+          </div>
+
+          <div className=\"form-actions\">
+            <Button
+              variant=\"primary\"
+              onClick={handleCopyNote}
+              disabled={!!missingFields.length}
+            >
+              Copy Note
+            </Button>
+            <Button
+              variant=\"secondary\"
+              onClick={handlePolish}
+              disabled={isPolishing || !generatedNote}
+            >
+              {isPolishing ? 'Polishing...' : 'Optimise Note'}
+            </Button>
+            <Button
+              variant=\"outline\"
+              onClick={handleClear}
+            >
+              Clear
+            </Button>
+          </div>
+          <p className=\"audit-reminder\">
+            <strong>Audit reminder:</strong> Verify accuracy before signing.
+          </p>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default ObservationNoteForm;
