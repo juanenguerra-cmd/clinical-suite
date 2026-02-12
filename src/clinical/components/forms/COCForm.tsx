@@ -402,7 +402,7 @@ const COCForm: React.FC = () => {
     }
 
     return lines.join(' ').replace(/\s{2,}/g, ' ').trim();
-  }, [formData, selectedSystems, systemAssessments, selectedInterventions, includeCustom, selectedFocusAreas]);
+  }, [formData, selectedSystems, systemAssessments, selectedInterventions, includeCustom]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(generatedNote);
@@ -587,7 +587,7 @@ const COCForm: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={selectedSystems.includes(system.id)}
-                  onChange={(e) => handleSystemToggle(system.id)}
+                  onChange={() => handleSystemToggle(system.id)}
                   className="rounded border-slate-300"
                 />
                 <span>{system.legend}</span>
